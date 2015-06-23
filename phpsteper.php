@@ -647,7 +647,6 @@
 			//$string = preg_replace_callback('/\&lt\;\?php(.|\R)*?(\?\&gt\;|$)/', "php_section", $string);
 			//echo $pattern;
 			check($string);
-	   		unlink("output.txt");
 			$string = preg_replace_callback($pattern,"handler_expression", $string);
 			check();
 			$string = change_non_php($string,1);
