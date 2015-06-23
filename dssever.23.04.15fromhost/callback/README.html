@@ -1,0 +1,112 @@
+<html>
+<head>
+<title>WR-Callmeback - Заказ обратного звонка</title>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1251">
+<meta http-equiv="Content-Language" content="ru">
+<META name="description" content="Описание скрипта заказа обратного звонка на PHP -  WR-Callmeback.">
+<META name="keywords" content="WR-Callmeback, Заказ обратного звонка, Описание, PHP">
+<meta name="Resource-type" content="document">
+<meta name="Robots" content="index,follow">
+<style>
+body { background-color: #FFF; margin: 0px; padding: 0px; }
+body { scrollbar-arrow-color: #3B88C5; scrollbar-face-color: #FFFFFF; scrollbar-track-color: #E0E0E0; scrollbar-highlight-color: #FFFFFF; scrollbar-3dlight-color: #C0C0C0; scrollbar-shadow-color: #FFFFFF; scrollbar-darkshadow-color: #B0B0B0; }
+font,th,td,p { font-family: Verdana, Arial, Helvetica, sans-serif; font-size: 12px; }
+a { text-decoration: underline; color: #3B88C5; }
+a:visited { text-decoration: underline; color: #3279B2; }
+a:hover, a:active { text-decoration: underline; color: #FF9C00; }
+hr { height: 0px; border: solid #3888C7 0px; border-top-width: 1px;}
+td.row2 { background-color: #FFF; }
+table.forumline { background-color: #C0C0C0; }
+table.forumline:hover { background-color: #B0B0B0; }
+</style>
+</head>
+
+
+<body bgcolor="#E5E5E5" text="#000000" link="#006699" vlink="#5493B4">
+
+
+<table width=80% cellspacing=0 cellpadding=10 align=center>
+<tr><td class=bodyline>
+
+<table width=100% cellspacing=0 cellpadding=0>
+<tr>
+<td align="center" width="100%" valign="middle"><span class="maintitle"><h3>WR-Callmeback &copy; версия 1.2</h3></span>
+</td></tr></table>
+<table width=100% cellpadding=4 cellspacing=2 class=forumline>
+
+<tr><th width=100% colspan=2 class=thCornerL height=25 nowrap=nowrap><font color=#FFFFFF>:: <b>Назначение скрипта</b> ::</font></th></tr>
+
+<tr><td width=100% class=row2 valign=middle>
+Самый простой способ интерактивного взаимодействия между администрацией сайта и посетителем - это обратная связь.
+Но, если клиенту что-либо не понятно, он хочет уточнить, но не может дозвониться до Вас.
+Этот скрипт специально предназначен чтобы решить эту проблему. Клиент выбирает параметры звонка, и просит Вас позвонить ему.
+Скрипт выводит форму и при вводе посетителем параметров, имени, емайла и сообщения <B>отправляет на Ваш e-mail сообщение с заявкой обратного звонка</B>.
+Размер: исполняемых файлов - <B>10 Кб;</B> скрипта с хелпом - <B>15 Кб</B>.
+<BR>
+
+</td></tr>
+
+
+
+<tr><th width=100% colspan=2class=thCornerL height=25 nowrap=nowrap><font color=#FFFFFF>:: <b>Особенности и настройки</b> ::</font></th></tr>
+
+<tr><td width=100% class=row2 valign=middle>
+&nbsp;&nbsp;&nbsp; -  В переменной <B><font color="FF0000">$adminemail</font></B> задаётся ваш электронный адрес;<BR>
+&nbsp;&nbsp;&nbsp; - <B>Выбор страницы возврата</B> - на которую переходит посетитель после отправки сообщения ($backurl).<BR>
+&nbsp;&nbsp;&nbsp; - Скрипт работает с любым значением php register_globals (on/off).<BR>
+
+</td></tr>
+
+
+<tr><th width=100% colspan=2 class=thCornerL height=25 nowrap=nowrap><font color=#FFFFFF>:: <b>Установка и использование</b> ::</font></th></tr>
+
+<tr><td width=100% class=row2 valign=middle>
+1. Поменяйте настройки внутри файла Callmeback.php. Обратите внимание на <B>переменную возврата из формы:</B> <BR>
+<B><font color="FF0000">$backurl="callmeback.html";</b></font> - это 
+ страница, куда возвращается человек после отправки сообщения.
+<hr color=#224488 size=-1 width=100%>
+2. Закачайте в любую папку на сервере файлы <B>callmeback.html и Callmeback.php</B> <BR>
+Выставьте им атрибуты Chmod <B><font color="FF0000">755</b></font>.<BR>
+   Закачивать и настраивать атрибуты скрипта можно менеджером 
+   "<B><font color="FF0000">Total Commander</font></b>" (Файл -> Изменить атрибуты). <BR>
+Попытайтесь запустить скрипт ссылкой такого типа: <B>http://Мой_сайт/ЛЮБАЯ-ПАПКА/callmeback.html</B><BR>
+Далее введите данные и отправть заявку на электронный адрес. Через небольшой промежуток времени убедитесь в доставке скриптом всех необходимых данных.
+<hr color=#224488 size=-1 width=100%>
+Изменения в версии 1.1:<br>
+- закрыта уязвимость от злоумышленников - поставлена защита на передаваемые данные.<br><br>
+
+P.S. Внимание! Скрипт написан на PHP и не работает на бесплатном хостинге НЕ поддерживающего эту язык, например, www.narod.ru.
+<BR><BR>Если все пункты вы выполнили, а скрипт так и не запустился, ну чтож, 
+заходите на форум по адресу: <a href="http://www.wr-script.ru/forum/index.php"><B>http://www.wr-script.ru/forum/</B></a>
+   и в разделе <B>"Помощь по WR-Scripts"</B> просмотрите темы, возможно решение Вашей проблемы уже есть на форуме.
+   Если нет - задавайте вопросы. Постарюсь Вам помочь.
+</td></tr>
+
+<tr><th width=100% colspan=2 class=thCornerL height=25 nowrap=nowrap><font color=#FFFFFF>:: <b>Лицензия</b> ::</font></th></tr>
+
+<tr><td width=100% class=row2 valign=middle>
+А) Пользоваться <B>WR-Callmeback &copy; можно абсолютно бесплатно.</B><BR>
+Б) Владельцам сайтов разрешается менять исходный код файлов.<BR>
+Д) <B>WR-Callmeback</B> распространяется по принципу "as is" (<B>"как есть"</B>).
+Это означает, что вы пользуетесь продуктом на свой риск. Автор не
+дает никаких гарантий и не несет никакой ответственности за возможный
+ущерб и убытки любого рода.
+</td></tr>
+
+</table>
+
+<center><font size=-2><small>Powered by <a href="http://www.wr-script.ru/" target="_blank" class="copyright">WR-Callmeback</a> &copy; версия 1.2 <br></font>
+<font size=3><pre>
+##############################################
+# Разработчик скрипта: WR (Gavrilov Mikhail) #
+# Имя скрипта: WR-Callmeback                 #
+# Версия скрипта: 1.2                        #
+# Статус: Бесплатный скрипт                  #
+# Требования: PHP 4.3.0                      #
+# Дата разработки: 26 сентября 2009 года     #
+# Страница: http://www.wr-script.ru/         #
+# E-mail:  http://www.wr-script.ru/sendmail/ #
+##############################################
+</pre>
+</body>
+</html>
