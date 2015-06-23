@@ -154,6 +154,7 @@
    	$correspond_table['require_once'] = ['color: red'];
    	$correspond_table['comment'] = ['color: gray'];
    	$correspond_table['echo'] = ['color: green'];
+   	$correspond_table['if'] = ['color: orange'];
    	if (!empty($_POST['file'])){
    		$file_name = $_POST['file'];
 	   	$constants['__file____phpsteper'] = ROOT."/".$file_name;
@@ -259,6 +260,12 @@
    		return $return;
    	}
 
+   	function if_phpsteper ($arg,$string) {
+   		echo "if finded";
+   		var_dump($arg);
+   		var_dump($string);
+   	}
+
    	function wtf ($file_name,$string) {
    		$myfile = fopen($file_name, "a") or die("Unable to open file!");
 		fwrite($myfile, $string);
@@ -286,8 +293,7 @@
    		var_dump($match);
    		echo "<br> end key_part <br>";*/
    		$key = key_def($match);
-   		$match[0] = preg_replace('#\S*\s*$#',"<span style='".(isset($correspond_table[$key][0])?$correspond_table[$key][0]:"color: brown")."'>$0</span>",$match[0]);
-   		// $match[0] = preg_replace('#\/\*(.|\R)*?\*\/#','<span style="'.$correspond_table['comment'][0].'">$0</span>',$match[0]);
+   		$match[0] = "<span style='".$correspond_table[$match[0]][0]."'>".$match[0]."</span>";
    		// echo $match[0];
    		return $match[0];
    	}
@@ -321,7 +327,8 @@
 
    		preg_match('/'.make_pattern_count_parentheses().'/',$string,$argstr);
    		if (isset($argstr[0])) {
-	   		$argstr = trim($argstr[0],"(); ");
+	   		$argstr = trim($argstr[0],"; ");
+	   		$argstr = preg_replace("#^\(|\)$#","",$argstr);
 	   		$argarr = explode(",",$argstr);
 
 	   		/*
@@ -395,6 +402,7 @@
 		var_dump($match[2]);
 		echo "<br />";*/
 
+		//delete expression equal ";"
 		if (trim($match[0]) == ";") {
 			return "";
 		}
