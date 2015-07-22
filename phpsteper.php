@@ -145,7 +145,7 @@
     //$type_statements = [];
    	//array_push($type_statements,[['red'],['gray','$catch_const','gray','$fill_const']]);
  
-	$number_of_expressions = 0;
+	$number_of_expressions = [0];
 	$correspond_table['define'] = ['color: blue'];
 	$correspond_table['error_reporting'] = ['color: blue'];
    	$correspond_table['include'] = ['color: red'];
@@ -160,6 +160,7 @@
 	   	$constants['__file____phpsteper'] = ROOT."/".$file_name;
    	}
    	$pattern = make_pattern();
+   	$condition = [];
 
    	function define_phpsteper ($arr,$string) {
    		global $constants;
@@ -260,10 +261,42 @@
    		return $return;
    	}
 
+
+	function require_once_phpsteper ($arg,$string) {
+   		$return = include_phpsteper ($arg,$string);
+   		return $return;
+   	}
+
+	function include_once_phpsteper ($arg,$string) {
+   		$return = include_phpsteper ($arg,$string);
+   		return $return;
+   	}
+
    	function if_phpsteper ($arg,$string) {
+
    		echo "if finded";
    		var_dump($arg);
+   		echo "<br /> <br /> string";
    		var_dump($string);
+   		echo "<br /> <br />";
+
+   		global $number_of_expressions;
+   		global $pattern;
+   		global $condition;
+   		global $condition_state;
+   		global $dataCheck;
+   		// for work all data check
+   		$reserve_dataCheck = $dataCheck;
+   		// save condition with state if $condition 
+   		array_push($condition, [$arg['arguments'][0],true]);
+   		$dataCheck = $arg['body'][0];
+   		array_push($number_of_expressions,0);
+   		$new_body = preg_replace_callback($pattern,"handler_expression", $arg['body'][0]);	
+   		check();
+   		array_pop($number_of_expressions);
+   		$dataCheck = $reserve_dataCheck;
+   		$string = preg_replace("#".preg_quote($arg['body'][0],"#")."#",$new_body,$string);
+   		return $string;
    	}
 
    	function wtf ($file_name,$string) {
@@ -287,15 +320,15 @@
    		return $return;
    	}
 
-   	function key_part ($match) {
+   	function key_part ($correspond_table_item) {
    		global $correspond_table;
    		/*echo "<br> key_part <br> ";
    		var_dump($match);
    		echo "<br> end key_part <br>";*/
-   		$key = key_def($match);
-   		$match[0] = "<span style='".$correspond_table[$match[0]][0]."'>".$match[0]."</span>";
+   		$key = key_def($correspond_table_item);
+   		$correspond_table_item[0] = "<span style='".$correspond_table[$correspond_table_item[0]][0]."'>".$correspond_table_item[0]."</span>";
    		// echo $match[0];
-   		return $match[0];
+   		return $correspond_table_item[0];
    	}
 
   	function key_def ($match = NULL) {
@@ -366,9 +399,14 @@
 	   		$array['arguments'] = array_values($argarr);
    		}
 
-	   		preg_match('/'.make_pattern_count_parentheses(100,"{").'/',$string,$match);
+	   		preg_match_all('/'.make_pattern_count_parentheses(100,"{").'/',$string,$match);
    		if (isset($match[0])) {
-	   		$array['body'] = $match[0];
+   			$array['body'] = [];
+   			foreach ($match[0] as $v) {
+		   		$v = trim($v,"; ");
+		   		$v = preg_replace("#^\{|\}$#","",$v);
+		   		array_push($array['body'], $v);
+   			}
    		}
 
    		return $array;
@@ -390,38 +428,46 @@
    		global $number_of_expressions;
    		global $dataCheck;
 
+
    		check($match[0]);	
 
 /*		if ($number_of_expressions == 5) {
 			var_dump($match);
 		}
-
-		echo $number_of_expressions."<br />";
-		var_dump($match[0]);
-		var_dump($match[1]);
-		var_dump($match[2]);
-		echo "<br />";*/
+*/
 
 		//delete expression equal ";"
 		if (trim($match[0]) == ";") {
 			return "";
 		}
 
+   		++$number_of_expressions[count($number_of_expressions)-1];
+
 		$match[0] = htmlentities($match[0]);
-		//defined which type of syntax expression;
+		//defined which type of syntax expression and change from "if: else" to "if() {} elseif () {}";
 		if (isset($match[1])) {
 			$match[0] = preg_replace("#^([\s\S\R]*?(if|switch)[\s\R]*".make_pattern_count_parentheses("100","(")."[\s\R]*)\:#","$1 {",$match[0],1);
 			$match[0] = preg_replace("#else[\s\R]*:#","}\r\nelse {",$match[0],1);
 			$match[0] = preg_replace("#(endif|endswitch)#","} $1",$match[0],1);
 		} 
+		/*find keypart in space befor parentheses and seve in $ma;
+*/		
 		$count = 0;
+		// assign $m all befor first parenthesis
    		preg_match("#^[^\(]*#",$match[0],$m);
+   		// assign $ma key part if finded correspond in $correspond_table and $m 
+   		/*echo 'make_pattern_arr ';
+   		var_dump(make_pattern_arr($correspond_table));
+   		echo "<br /> <br />";*/
 		$ma = preg_replace_callback(make_pattern_arr($correspond_table),"key_part",$m[0],1,$count);
    		if (!$count) {
-   			echo "handler_expression: no key part";
+   			echo "handler_expression: no key part <br /> <br />";
    		}
+   		// if keypart exists
    		else {
+   			// replace all befor first parenthesis by key part
 			$match[0] = preg_replace("#".preg_quote($m[0],"#")."#",$ma,$match[0]);
+			// assign $key 	last defined key ( key defined in key_part function by key_def() function)
 	   		$key = key_def();
 	   		$arrfunc = parse_func ($match[0],$key);
 	   		if (function_exists($key."_phpsteper")) {
@@ -436,11 +482,23 @@
 	   		}
 
    		}
-   		++$number_of_expressions;
-   		$match[0] = preg_replace("#^\h*\R#","\r\n .".$number_of_expressions,$match[0],1,$count);
-   		if (!$count) {
-   			$match[0] = $number_of_expressions.$match[0];
-   		}
+   		//$match[0] = preg_replace("#^\h*\R#","\r\n .".$number_of_expressions[count($number_of_expressions)-1],$match[0],1,$count);
+   		//if (!$count) {
+		/*echo "number_of_expressions ";	
+		var_dump($number_of_expressions);
+		echo "<br />";
+		var_dump($match[0]);
+*/		// var_dump($match[1]);
+		// var_dump($match[2]);
+		echo "<br />";
+		$number_of_expressions_string = "";
+		foreach( $number_of_expressions as $val) {
+			$number_of_expressions_string = "&nbsp;&nbsp;&nbsp;&nbsp;".$number_of_expressions_string;
+			$number_of_expressions_string .= $val.",";
+		}
+		$match[0] = preg_replace("#^(\s)*#","$0 "."$number_of_expressions_string ",$match[0]);
+   			// $match[0] = $number_of_expressions[count($number_of_expressions)-1]." ".$match[0];
+   		// }
 		return  $match[0];
    	}
 
@@ -455,18 +513,20 @@
 
    	function make_pattern () {
 
-   		$deep = 100;
+   		$deep = 2;
+   		$parenthesis = make_pattern_count_parentheses ($deep,"(");
+   		$braces = make_pattern_count_parentheses ($deep,"{");
    		$pattern = "/";	
    		$pattern .= "([^\;\}]*?(if|switch)[\s\R]*";
-   		$pattern .= make_pattern_count_parentheses ($deep,"(");
-   		$pattern .= "[\s\R]*:[\s\S\R]*?(endif|endswitch)[\s\R]*?\;)|";
+   		$pattern .= $parenthesis;
+   		$pattern .= "[\s]*:[\s\S]*?(endif|endswitch)[\s\R]*?\;)(\s)*|";
    		$pattern .= "(([^\;\(\)\{\}])*(";
-   		$pattern .= make_pattern_count_parentheses ($deep,"(");
-   		$pattern .= ")+(([^\;\{\}]*\;)|(((\s|\R|(\<br\ \/\>)|else[\s\R]*(if)?)*";
-   		$pattern .= make_pattern_count_parentheses ($deep,"{");
-   		$pattern .= ")*(\;?)))";
-		$pattern .= ")|";
-		$pattern .= "[^\(\)]*\;";
+   		$pattern .= $parenthesis;
+   		$pattern .= ")+(([^\;\{\}]*\;)|(((\s|(\<br\ \/\>)|else\s*(if(\s)*$parenthesis(\s)*)?)*";
+   		$pattern .= $braces;
+   		$pattern .= ")+(\;?)))";
+		$pattern .= ")(\s)*|";
+		$pattern .= "[^\(\)]*\;(\s)*";
    		$pattern .= "/";
    		return $pattern;
    	}
@@ -646,14 +706,15 @@
 	if ((count($_POST)>0)&&($file_name = $_POST['file'])) {
 	    //show name presented file
 	    echo '<br>'.ROOT."/".$file_name.'<br>';
-	    //handler file by 8000 bytes and by <php > called php_section 
 		$file = fopen(ROOT."/".$file_name,"r");
 		while (!feof($file)){
 			$string = fread($file,filesize($file_name)+1);
+			//non php text to -=000000=-
 			$string = change_non_php($string,0);
+			//comments to -_0000000_-
 			$string = hide_any_comments($string,0);
 			//$string = preg_replace_callback('/\&lt\;\?php(.|\R)*?(\?\&gt\;|$)/', "php_section", $string);
-			//echo $pattern;
+			echo $pattern;
 			check($string);
 			$string = preg_replace_callback($pattern,"handler_expression", $string);
 			check();
