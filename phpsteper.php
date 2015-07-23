@@ -283,15 +283,16 @@
    		global $number_of_expressions;
    		global $pattern;
    		global $condition;
-   		global $condition_state;
    		global $dataCheck;
    		// for work all data check
    		$reserve_dataCheck = $dataCheck;
    		// save condition with state if $condition 
-   		array_push($condition, [$arg['arguments'][0],true]);
-   		$dataCheck = $arg['body'][0];
    		array_push($number_of_expressions,0);
-   		$new_body = preg_replace_callback($pattern,"handler_expression", $arg['body'][0]);	
+   		foreach ($arg['condition'] as $key_condition => $condition) {
+	   		array_push($condition, [$condition,true]);
+	   		$dataCheck = $arg['body'][$kay_condtition];
+	   		$new_body = preg_replace_callback($pattern,"handler_expression", $arg['body'][$key_condition]);	
+   		}
    		check();
    		array_pop($number_of_expressions);
    		$dataCheck = $reserve_dataCheck;
@@ -399,7 +400,17 @@
 	   		$array['arguments'] = array_values($argarr);
    		}
 
-	   		preg_match_all('/'.make_pattern_count_parentheses(100,"{").'/',$string,$match);
+	   	preg_match_all('/'.make_pattern_count_parentheses().'/',$string,$match);
+   		if (isset($match[0])) {
+   			$array['condition'] = [];
+   			foreach ($match[0] as $v) {
+		   		$v = trim($v,"; ");
+		   		$v = preg_replace("#^\(|\)$#","",$v);
+		   		array_push($array['condition'], $v);
+   			}
+   		}
+
+	   	preg_match_all('/'.make_pattern_count_parentheses(100,"{").'/',$string,$match);
    		if (isset($match[0])) {
    			$array['body'] = [];
    			foreach ($match[0] as $v) {
