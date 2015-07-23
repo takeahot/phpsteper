@@ -104,7 +104,7 @@
 
 			for (var indexAllData in allData) {
 				if (indexAllData.substr(0,6) === 'parent') {
-					allData['parent'+toString(indexAllData.substr(7)+1)] = allData[indexAllData];
+					allData['parent'+toString(indexAllData.substr(6)+1)] = allData[indexAllData];
 				}
 			}
 
@@ -274,12 +274,12 @@
 
    	function if_phpsteper ($arg,$string) {
 
-   		echo "if finded";
+   		/*echo "if finded";
    		var_dump($arg);
    		echo "<br /> <br /> string";
    		var_dump($string);
    		echo "<br /> <br />";
-
+*/
    		global $number_of_expressions;
    		global $pattern;
    		global $condition;
@@ -288,15 +288,18 @@
    		$reserve_dataCheck = $dataCheck;
    		// save condition with state if $condition 
    		array_push($number_of_expressions,0);
-   		foreach ($arg['condition'] as $key_condition => $condition) {
-	   		array_push($condition, [$condition,true]);
-	   		$dataCheck = $arg['body'][$kay_condtition];
-	   		$new_body = preg_replace_callback($pattern,"handler_expression", $arg['body'][$key_condition]);	
+   		foreach ($arg['body'] as $key_body => $body) {
+   			if (isset($arg['condition'][$key_body])) {
+		   		array_push($condition, [$arg['condition'][$key_body],true]);
+   			}
+	   		$dataCheck = $body;
+	   		$new_body = preg_replace_callback($pattern,"handler_expression", $body);	
+	   		check();
+	   		$string = preg_replace("#".preg_quote($body,"#")."#",$new_body,$string);
+	   		$condition[count($condition)-1][1] = false;
    		}
-   		check();
    		array_pop($number_of_expressions);
    		$dataCheck = $reserve_dataCheck;
-   		$string = preg_replace("#".preg_quote($arg['body'][0],"#")."#",$new_body,$string);
    		return $string;
    	}
 
@@ -400,7 +403,37 @@
 	   		$array['arguments'] = array_values($argarr);
    		}
 
-	   	preg_match_all('/'.make_pattern_count_parentheses().'/',$string,$match);
+		$array['condition'] = [];
+		$array['body'] = [];
+   		do {
+   			$pos_parentheses = strlen($string);
+   			$pos_braces = strlen($string);
+   			$exists_parentheses = preg_match("#".make_pattern_count_parentheses()."#",$string,$parentheses); 
+   			if ($exists_parentheses) {
+   				$pos_parentheses = strpos($string,$parentheses[0]);
+   			}
+   			$exists_braces = preg_match('/'.make_pattern_count_parentheses(100,"{").'/',$string,$braces);
+   			if ($exists_braces) {
+   				$pos_braces = strpos($string,$braces[0]);
+   			}
+   			if ($exists_parentheses||$exists_braces) {
+   				if ($pos_parentheses < $pos_braces) {
+			   		$string = preg_replace("#".preg_quote($parentheses[0],"#")."#","",$string);
+			   		$parentheses[0] = trim($parentheses[0],"; ");
+			   		$parentheses[0] = preg_replace("#^\(|\)$#","",$parentheses[0]);
+			   		array_push($array['condition'],$parentheses[0]);
+   				} else {
+			   		$string = preg_replace("#".preg_quote($braces[0],"#")."#","",$string,1);
+					$braces[0] = trim($braces[0],"; ");
+			   		$braces[0] = preg_replace("#^\{|\}$#","",$braces[0]);
+			   		array_push($array['body'],$braces[0]);
+   				}
+   			} else {
+   				break;
+   			}
+   		} while (1);
+
+/*	   	preg_match_all('/'.make_pattern_count_parentheses().'/',$string,$match);
    		if (isset($match[0])) {
    			$array['condition'] = [];
    			foreach ($match[0] as $v) {
@@ -419,7 +452,7 @@
 		   		array_push($array['body'], $v);
    			}
    		}
-
+*/
    		return $array;
    	}
 
@@ -725,7 +758,7 @@
 			//comments to -_0000000_-
 			$string = hide_any_comments($string,0);
 			//$string = preg_replace_callback('/\&lt\;\?php(.|\R)*?(\?\&gt\;|$)/', "php_section", $string);
-			echo $pattern;
+			//echo $pattern;
 			check($string);
 			$string = preg_replace_callback($pattern,"handler_expression", $string);
 			check();
