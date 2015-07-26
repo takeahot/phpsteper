@@ -104,7 +104,7 @@
 
 			for (var indexAllData in allData) {
 				if (indexAllData.substr(0,6) === 'parent') {
-					allData['parent'+toString(indexAllData.substr(6)+1)] = allData[indexAllData];
+					allData['parent'+(Number(indexAllData.substr(6))+1)] = allData[indexAllData];
 				}
 			}
 
@@ -177,6 +177,7 @@
    		//var_dump($arr);
    		//echo "<br> endarr <br>";
    		global $constants;
+   		global $condition;
    		$data = [];
 
 		//first argument from call function include
@@ -230,9 +231,9 @@
 
    		$data['file'] = $path_to_file;
    		$data['constants'] = $constants;
+   		$data['condition'] = $condition;
 
-
-		$json = json_encode($data);
+		$json = json_encode($data,JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP);
 
 		$link = '<a class="a" href=\'javascript:sendData('.$json.');\'>'.$arr['arguments'][0].'</a>';
 		$pattern = "#".preg_quote($arr['arguments'][0],"#")."#";
@@ -290,7 +291,7 @@
    		array_push($number_of_expressions,0);
    		foreach ($arg['body'] as $key_body => $body) {
    			if (isset($arg['condition'][$key_body])) {
-		   		array_push($condition, [$arg['condition'][$key_body],true]);
+		   		array_push($condition, [addslashes($arg['condition'][$key_body]),true]);
    			}
 	   		$dataCheck = $body;
 	   		$new_body = preg_replace_callback($pattern,"handler_expression", $body);	
