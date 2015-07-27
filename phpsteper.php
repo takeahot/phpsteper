@@ -160,13 +160,22 @@
 	   	$constants['__file____phpsteper'] = ROOT."/".$file_name;
    	}
    	$pattern = make_pattern();
-   	$condition = [];
+   	if ($_POST['condition'] = "" ){
+   		$condition = $_POST['condition'];
+   	} else 
+ 	{
+	   	$condition = [];
+   	};
+   	echo "first condition";
+   	var_dump ($condition);
+   	echo "<br />";
 
    	function define_phpsteper ($arr,$string) {
    		global $constants;
    		$arr['arguments'][0] = trim ($arr['arguments'][0],'\'\" ');
    		$arr['arguments'][0] = preg_replace("#^&quot\;|&quot\;$#","",$arr['arguments'][0]);
-   		$constants[strtolower($arr['arguments'][0])."__phpsteper"] = $arr['arguments'][1];
+   		$constant_val = change_constants($arr['arguments'][1]);
+   		$constants[strtolower($arr['arguments'][0])."__phpsteper"] = $constant_val;
 //   		echo "name constant - ".strtolower($arr['arguments'][0])."__phpsteper"." which value is ".$constants[strtolower($arr['arguments'][0])."__phpsteper"];
    	}
 
@@ -233,7 +242,7 @@
    		$data['constants'] = $constants;
    		$data['condition'] = $condition;
 
-		$json = json_encode($data,JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP);
+		$json = json_encode($data,JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_FORCE_OBJECT);
 
 		$link = '<a class="a" href=\'javascript:sendData('.$json.');\'>'.$arr['arguments'][0].'</a>';
 		$pattern = "#".preg_quote($arr['arguments'][0],"#")."#";
@@ -285,19 +294,21 @@
    		global $pattern;
    		global $condition;
    		global $dataCheck;
+   		global $file_name;
    		// for work all data check
    		$reserve_dataCheck = $dataCheck;
    		// save condition with state if $condition 
    		array_push($number_of_expressions,0);
    		foreach ($arg['body'] as $key_body => $body) {
    			if (isset($arg['condition'][$key_body])) {
-		   		array_push($condition, [addslashes($arg['condition'][$key_body]),true]);
+		   		array_push($condition, array(addslashes($arg['condition'][$key_body]),$file_name,true));
    			}
 	   		$dataCheck = $body;
 	   		$new_body = preg_replace_callback($pattern,"handler_expression", $body);	
 	   		check();
 	   		$string = preg_replace("#".preg_quote($body,"#")."#",$new_body,$string);
-	   		$condition[count($condition)-1][1] = false;
+	   		$condition[count($condition)-1][2] = false;
+	   		var_dump($condition);
    		}
    		array_pop($number_of_expressions);
    		$dataCheck = $reserve_dataCheck;
@@ -317,8 +328,8 @@
    		foreach ($constants as $key => $val) {
    			$key = preg_replace("#\_\_phpsteper$#","",$key);
    			$key = strtoupper($key);
-   			$key = "#".$key."#";
-   			array_push($arrkey,$key);	
+   			$key = "#".preg_quote($key,"#")."#";
+   			array_push($arrkey,$key);		
    			array_push($arrval,$val);
    		}
    		$return = preg_replace($arrkey,$arrval,$string);
