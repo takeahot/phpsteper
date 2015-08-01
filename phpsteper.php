@@ -102,14 +102,24 @@
 
 		function sendData (arr) {
 
+			var parents = {};
 			for (var indexAllData in allData) {
 				if (indexAllData.substr(0,6) === 'parent') {
-					allData['parent'+(Number(indexAllData.substr(6))+1)] = allData[indexAllData];
+					parents[Number(indexAllData.substr(6))+1] = allData[indexAllData];
+					delete allData[indexAllData];
 				}
 			}
 
 			if (arr['file']) {
 				allData['parent0'] = allData['file'];
+			}
+
+			for (var i in parents) {
+			for (var i in parents) {
+				allData["parent"+i] = parents[i];
+			}
+
+				allData["parent"+i] = parents[i];
 			}
 
 			for ( var indexArr in arr) {
@@ -122,7 +132,12 @@
 			for (var i in allData) {
 				var input = element.appendChild(document.createElement('input'));
 				input.name = i; 
-				input.value = allData[i];
+				if (typeof allData[i] === 'string' || allData[i] instanceof String){
+					input.value = allData[i];
+				} else 
+				{
+					input.value = JSON.stringify(allData[i]);
+				}
 			} 
 
 			element.submit();
@@ -155,20 +170,7 @@
    	$correspond_table['comment'] = ['color: gray'];
    	$correspond_table['echo'] = ['color: green'];
    	$correspond_table['if'] = ['color: orange'];
-   	if (!empty($_POST['file'])){
-   		$file_name = $_POST['file'];
-	   	$constants['__file____phpsteper'] = ROOT."/".$file_name;
-   	}
    	$pattern = make_pattern();
-   	if ($_POST['condition'] = "" ){
-   		$condition = $_POST['condition'];
-   	} else 
- 	{
-	   	$condition = [];
-   	};
-   	echo "first condition";
-   	var_dump ($condition);
-   	echo "<br />";
 
    	function define_phpsteper ($arr,$string) {
    		global $constants;
@@ -240,7 +242,9 @@
 
    		$data['file'] = $path_to_file;
    		$data['constants'] = $constants;
-   		$data['condition'] = $condition;
+   		if ($condition !== NULL) {
+	   		$data['condition'] = $condition;
+   		}
 
 		$json = json_encode($data,JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_FORCE_OBJECT);
 
@@ -295,6 +299,11 @@
    		global $condition;
    		global $dataCheck;
    		global $file_name;
+
+   		if ($condition === NULL) {
+   			$condition = [];
+   		}
+
    		// for work all data check
    		$reserve_dataCheck = $dataCheck;
    		// save condition with state if $condition 
@@ -308,7 +317,6 @@
 	   		check();
 	   		$string = preg_replace("#".preg_quote($body,"#")."#",$new_body,$string);
 	   		$condition[count($condition)-1][2] = false;
-	   		var_dump($condition);
    		}
    		array_pop($number_of_expressions);
    		$dataCheck = $reserve_dataCheck;
@@ -483,6 +491,7 @@
    		global $correspond_table;
    		global $number_of_expressions;
    		global $dataCheck;
+   		$return_expression = "";
 
 
    		check($match[0]);	
@@ -491,6 +500,8 @@
 			var_dump($match);
 		}
 */
+		echo "<br /> handler_expression";
+			var_dump($match[0]);
 
 		//delete expression equal ";"
 		if (trim($match[0]) == ";") {
@@ -499,11 +510,10 @@
 
    		++$number_of_expressions[count($number_of_expressions)-1];
 
-		$match[0] = htmlentities($match[0]);
 		//defined which type of syntax expression and change from "if: else" to "if() {} elseif () {}";
 		if (isset($match[1])) {
-			$match[0] = preg_replace("#^([\s\S\R]*?(if|switch)[\s\R]*".make_pattern_count_parentheses("100","(")."[\s\R]*)\:#","$1 {",$match[0],1);
-			$match[0] = preg_replace("#else[\s\R]*:#","}\r\nelse {",$match[0],1);
+			$match[0] = preg_replace("#^([\s\S]*?(if|switch)\s*".make_pattern_count_parentheses("100","(")."\s*)\:#","$1 {",$match[0],1);
+			$match[0] = preg_replace("#else\s*:#","}\r\nelse {",$match[0],1);
 			$match[0] = preg_replace("#(endif|endswitch)#","} $1",$match[0],1);
 		} 
 		/*find keypart in space befor parentheses and seve in $ma;
@@ -517,12 +527,12 @@
    		echo "<br /> <br />";*/
 		$ma = preg_replace_callback(make_pattern_arr($correspond_table),"key_part",$m[0],1,$count);
    		if (!$count) {
-   			echo "handler_expression: no key part <br /> <br />";
+   			//echo "handler_expression: no key part <br /> <br />";
    		}
    		// if keypart exists
    		else {
    			// replace all befor first parenthesis by key part
-			$match[0] = preg_replace("#".preg_quote($m[0],"#")."#",$ma,$match[0]);
+			$return_expression = preg_replace("#".preg_quote($m[0],"#")."#",$ma,$match[0]);
 			// assign $key 	last defined key ( key defined in key_part function by key_def() function)
 	   		$key = key_def();
 	   		$arrfunc = parse_func ($match[0],$key);
@@ -714,16 +724,20 @@
     }
 
     function replace_any_comments ($match = NULL) {
+    	if (preg_match("#^(\'|\")[\s\S]*?(\'|\")$#",$match[0]) ) {
+    		return $match[0];
+    	} else {
     	$count = collect_any_comments($match);
     	$count = str_pad($count,6,'0',STR_PAD_LEFT);	
     	return " --==".$count."==-- ";
+    	}
     }
 
 	function hide_any_comments ($string,$comments_switch) {
 	    	global $collection_any_comments;
     	if (!$comments_switch) {
 	    	replace_any_comments ();
-    		$string = preg_replace_callback ("#(\/\*[\s\S\R]*?\*\/)|(\/\/[\s\S]*?\R)#","replace_any_comments",$string);	
+    		$string = preg_replace_callback ("#(\/\*[\S\s]*?\*\/)|(\/\/[\S\s]*?\R)|\"[^\"]+\"|\'[^\']+\'#","replace_any_comments",$string);	
 	    	//echo $string;
     	}
     	else {
@@ -735,6 +749,56 @@
     	}
     	return $string;
 		
+	}
+
+    function collect_any_quotation ($match = NULL) {
+
+    	global $collection_any_quotation;
+    	if ($match !== NULL) {
+    		array_push($collection_any_quotation,$match[0]);
+    		return count($collection_any_quotation);
+    	}
+    	else {
+    		$collection_any_quotation = [];
+    		return "0";
+    	}
+    }
+
+    function replace_any_quotation ($match = NULL) {
+    	echo "<br /> ".$match[0]."<br />";
+    	$count = collect_any_quotation($match);
+    	$count = str_pad($count,6,'0',STR_PAD_LEFT);	
+    	return " --++".$count."++-- ";
+    }
+
+	function hide_any_quotation ($string,$quotation_switch) {
+	    	global $collection_any_quotation;
+    	if (!$quotation_switch) {
+	    	replace_any_quotation ();
+    		$string = preg_replace_callback ("#\"[^\"]+\"|\'[^\']+\'#","replace_any_quotation",$string);	
+	    	//echo $string;
+    	}
+    	else {
+			$string = preg_replace_callback ("#\-\-\+\+\d{6}\+\+\-\-#", function ($match) { 
+    			global $collection_any_quotation; 
+    			$index = trim($match[0],"+-"); 
+    			return "<span style='color:slategray;'>".htmlentities($collection_any_quotation[ltrim($index,"0")-1])."</span>"; 
+    		},$string);
+    	}
+    	return $string;
+		
+	}
+
+	function html_formating ($string) {
+		$string = str_replace(" ","&nbsp;&nbsp;",$string);
+		$string = nl2br($string);
+		return $string;
+	}
+
+	function var_dump_html ($var) {
+		ob_start("html_formating");
+		var_dump($var);
+		ob_end_flush();
 	}
 
 /*    function php_section ($match) {
@@ -754,10 +818,25 @@
 		return $match[0];
     }*/
 
+    function pass_data ($name_data) {
+
+    	global $_POST;
+	   	if (isset($_POST[$name_data])&&$_POST[$name_data] !== "" ){
+	   		$_POST[$name_data] = json_decode($_POST[$name_data],JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_FORCE_OBJECT);
+	   		return $_POST[$name_data];
+	   	} 
+    }
 
 
-							var_dump($_POST);
-
+	   	$condition = pass_data("condition");
+	   	$constants = pass_data("constants");
+	   	if (!empty($_POST['file'])){
+   			$file_name = $_POST['file'];
+	   		$constants['__file____phpsteper'] = ROOT."/".$file_name;
+   		}
+							var_dump_html($_POST);
+							echo "<br />";
+							
 
 	if ((count($_POST)>0)&&($file_name = $_POST['file'])) {
 	    //show name presented file
@@ -767,10 +846,11 @@
 			$string = fread($file,filesize($file_name)+1);
 			//non php text to -=000000=-
 			$string = change_non_php($string,0);
-			//comments to -_0000000_-
+			//comments to -_000000_-
 			$string = hide_any_comments($string,0);
 			//$string = preg_replace_callback('/\&lt\;\?php(.|\R)*?(\?\&gt\;|$)/', "php_section", $string);
-			//echo $pattern;
+			// echo $pattern;
+			//$string = hide_any_quotation($string,0);
 			check($string);
 			$string = preg_replace_callback($pattern,"handler_expression", $string);
 			check();
