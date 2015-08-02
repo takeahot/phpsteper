@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 	<meta charset="UTF-8">
-	<title>Document</title>
+	<title><?php echo $_POST['file']; ?></title>
 	<style>
 		body {
 			margin: 0;
@@ -172,17 +172,19 @@
    	$correspond_table['if'] = ['color: orange'];
    	$pattern = make_pattern();
 
-   	function define_phpsteper ($arr,$string) {
+   	function define_phpsteper ($arr) {
    		global $constants;
+   		$arr['arguments'][0] = hide_any_quotation($arr['arguments'][0],1);
    		$arr['arguments'][0] = trim ($arr['arguments'][0],'\'\" ');
    		$arr['arguments'][0] = preg_replace("#^&quot\;|&quot\;$#","",$arr['arguments'][0]);
+   		$arr['arguments'][1] = hide_any_quotation($arr['arguments'][1],1);
    		$constant_val = change_constants($arr['arguments'][1]);
    		$constants[strtolower($arr['arguments'][0])."__phpsteper"] = $constant_val;
 //   		echo "name constant - ".strtolower($arr['arguments'][0])."__phpsteper"." which value is ".$constants[strtolower($arr['arguments'][0])."__phpsteper"];
    	}
 
 
-   	function include_phpsteper ($arr,$string) {
+   	function include_phpsteper ($arr) {
 
    		//echo "<br> arr <br>";
    		//var_dump($arr);
@@ -191,6 +193,7 @@
    		global $condition;
    		$data = [];
 
+   		$arr['arguments'][0] = hide_any_quotation($arr['arguments'][0],1);
 		//first argument from call function include
 		$path_to_file = $arr['arguments'][0];	
 		//resolve constant
@@ -253,13 +256,15 @@
 	   	//echo "<br> pattern - ".$pattern." endpattern";
 	   	//echo $string;
 	   	//echo $link;
-	   	$string = preg_replace($pattern,$link,$string);
+	   	$return['pattern'] = $pattern;
+	   	$return['inclusion'] = $link;
 	   	//echo $string;
-		return $string;
+		return $return;
    	}
 
    	function dirname_phpsteper($string) {
    		//echo "<br> $string";
+   		$string = hide_any_quotation($string,1);
    		preg_match("#dirname(\s|\R)*?\(([^\(\)]*?)\)#",$string,$match);
    		if ($match) {
 	   		$string = preg_replace("#dirname(\s|\R)*?\(([^\(\)]*?)\)#",dirname($match[2]),$string);
@@ -270,23 +275,23 @@
    		return $string;
    	}
 
-   	function require_phpsteper ($arg,$string) {
-   		$return = include_phpsteper ($arg,$string);
+   	function require_phpsteper ($arg) {
+   		$return = include_phpsteper ($arg);
    		return $return;
    	}
 
 
-	function require_once_phpsteper ($arg,$string) {
-   		$return = include_phpsteper ($arg,$string);
+	function require_once_phpsteper ($arg) {
+   		$return = include_phpsteper ($arg);
    		return $return;
    	}
 
-	function include_once_phpsteper ($arg,$string) {
-   		$return = include_phpsteper ($arg,$string);
+	function include_once_phpsteper ($arg) {
+   		$return = include_phpsteper ($arg);
    		return $return;
    	}
 
-   	function if_phpsteper ($arg,$string) {
+   	function if_phpsteper ($arg) {
 
    		/*echo "if finded";
    		var_dump($arg);
@@ -299,6 +304,9 @@
    		global $condition;
    		global $dataCheck;
    		global $file_name;
+   		$return = ['pattern','inclusion'];
+   		$return['pattern'] = []; 
+   		$return['inclusion'] = [];
 
    		if ($condition === NULL) {
    			$condition = [];
@@ -310,17 +318,18 @@
    		array_push($number_of_expressions,0);
    		foreach ($arg['body'] as $key_body => $body) {
    			if (isset($arg['condition'][$key_body])) {
-		   		array_push($condition, array(addslashes($arg['condition'][$key_body]),$file_name,true));
+		   		array_push($condition, array(addslashes(hide_any_quotation($arg['condition'][$key_body],1)),$file_name,true));
    			}
 	   		$dataCheck = $body;
 	   		$new_body = preg_replace_callback($pattern,"handler_expression", $body);	
 	   		check();
-	   		$string = preg_replace("#".preg_quote($body,"#")."#",$new_body,$string);
+	   		array_push($return['pattern'],"#".preg_quote($body,"#")."#");
+	   		array_push($return['inclusion'],$new_body);
 	   		$condition[count($condition)-1][2] = false;
    		}
    		array_pop($number_of_expressions);
    		$dataCheck = $reserve_dataCheck;
-   		return $string;
+   		return $return;
    	}
 
    	function wtf ($file_name,$string) {
@@ -379,8 +388,8 @@
 /*   		if ($key !== "") {
 	   		$array['key'] = $key;
    		}*/
-
    		preg_match('#^[^\(]*#',$string,$array['key']);
+   		$array['key'] = hide_any_quotation($array['key'],1);	
 
    		preg_match('/'.make_pattern_count_parentheses().'/',$string,$argstr);
    		if (isset($argstr[0])) {
@@ -421,6 +430,7 @@
 	   			}
 	   		}
 	   		$array['arguments'] = array_values($argarr);
+  	 		$array['arguments'] = hide_any_quotation($array['arguments'],1);	
    		}
 
 		$array['condition'] = [];
@@ -441,12 +451,12 @@
 			   		$string = preg_replace("#".preg_quote($parentheses[0],"#")."#","",$string);
 			   		$parentheses[0] = trim($parentheses[0],"; ");
 			   		$parentheses[0] = preg_replace("#^\(|\)$#","",$parentheses[0]);
-			   		array_push($array['condition'],$parentheses[0]);
+			   		array_push($array['condition'],hide_any_quotation($parentheses[0],1));
    				} else {
 			   		$string = preg_replace("#".preg_quote($braces[0],"#")."#","",$string,1);
 					$braces[0] = trim($braces[0],"; ");
 			   		$braces[0] = preg_replace("#^\{|\}$#","",$braces[0]);
-			   		array_push($array['body'],$braces[0]);
+			   		array_push($array['body'],hide_any_quotation($braces[0],1));
    				}
    			} else {
    				break;
@@ -458,7 +468,7 @@
    			$array['condition'] = [];
    			foreach ($match[0] as $v) {
 		   		$v = trim($v,"; ");
-		   		$v = preg_replace("#^\(|\)$#","",$v);
+		   		$v = preg_replace("#^\(|\)$#","",$v);ваз 2105
 		   		array_push($array['condition'], $v);
    			}
    		}
@@ -486,6 +496,21 @@
    		$match[0] = $link;	
    	}
 */
+   	function change_frag ($pattern,$inclusion,$string) {
+   		if (is_array($pattern)) {
+   			foreach ($pattern as $k => &$val) {
+		   		$val = htmlentities($val);
+   			}
+   		}
+   		else {
+	   		$pattern = htmlentities($pattern);
+   		}
+   		$string = hide_any_quotation($string,1);
+   		$string = htmlentities($string);
+   		$return = preg_replace($pattern, $inclusion, $string,-1,$count);
+   		return $return;
+   	}
+
    	function handler_expression ($match) {
 
    		global $correspond_table;
@@ -500,8 +525,6 @@
 			var_dump($match);
 		}
 */
-		echo "<br /> handler_expression";
-			var_dump($match[0]);
 
 		//delete expression equal ";"
 		if (trim($match[0]) == ";") {
@@ -528,11 +551,12 @@
 		$ma = preg_replace_callback(make_pattern_arr($correspond_table),"key_part",$m[0],1,$count);
    		if (!$count) {
    			//echo "handler_expression: no key part <br /> <br />";
+			$match[0] = htmlentities($match[0]);
    		}
    		// if keypart exists
    		else {
    			// replace all befor first parenthesis by key part
-			$return_expression = preg_replace("#".preg_quote($m[0],"#")."#",$ma,$match[0]);
+			
 			// assign $key 	last defined key ( key defined in key_part function by key_def() function)
 	   		$key = key_def();
 	   		$arrfunc = parse_func ($match[0],$key);
@@ -540,12 +564,19 @@
 	   			$func_name = $key."_phpsteper";
 	   			//$arrfunc is all function's parts in arr. $arrfunc = [key,arguments,body];
 	   			//$mathc[0] is string with expression
-	  			$return = $func_name($arrfunc,$match[0]);
+	  			$return = $func_name($arrfunc);
 	   			if ($return) {
-	   				$match[0] = $return;
+		  			$match[0] = change_frag($return['pattern'],$return['inclusion'],$match[0]);
+	   			} else 
+	   			{
+	   				$match[0] = htmlentities($match[0]);
 	   			}
 
+	   		} else {
+
+	   				$match[0] = htmlentities($match[0]);
 	   		}
+	   		$match[0] = preg_replace(htmlentities("#".preg_quote($m[0],"#")."#"),$ma,$match[0]);
 
    		}
    		//$match[0] = preg_replace("#^\h*\R#","\r\n .".$number_of_expressions[count($number_of_expressions)-1],$match[0],1,$count);
@@ -724,6 +755,7 @@
     }
 
     function replace_any_comments ($match = NULL) {
+    	//echo "COMMENTS <br /> $match[0] <br />";
     	if (preg_match("#^(\'|\")[\s\S]*?(\'|\")$#",$match[0]) ) {
     		return $match[0];
     	} else {
@@ -737,7 +769,7 @@
 	    	global $collection_any_comments;
     	if (!$comments_switch) {
 	    	replace_any_comments ();
-    		$string = preg_replace_callback ("#(\/\*[\S\s]*?\*\/)|(\/\/[\S\s]*?\R)|\"[^\"]+\"|\'[^\']+\'#","replace_any_comments",$string);	
+    		$string = preg_replace_callback ("#(\/\*[\S\s]*?\*\/)|(\/\/[\S\s]*?\R)|\"[^\"]*\"|\'[^\']*\'#","replace_any_comments",$string);	
 	    	//echo $string;
     	}
     	else {
@@ -765,7 +797,7 @@
     }
 
     function replace_any_quotation ($match = NULL) {
-    	echo "<br /> ".$match[0]."<br />";
+    	//echo "<br /> ".$match[0]."<br />";
     	$count = collect_any_quotation($match);
     	$count = str_pad($count,6,'0',STR_PAD_LEFT);	
     	return " --++".$count."++-- ";
@@ -775,7 +807,7 @@
 	    	global $collection_any_quotation;
     	if (!$quotation_switch) {
 	    	replace_any_quotation ();
-    		$string = preg_replace_callback ("#\"[^\"]+\"|\'[^\']+\'#","replace_any_quotation",$string);	
+    		$string = preg_replace_callback ("#\"[^\"]*\"|\'[^\']*\'#","replace_any_quotation",$string);	
 	    	//echo $string;
     	}
     	else {
@@ -850,7 +882,7 @@
 			$string = hide_any_comments($string,0);
 			//$string = preg_replace_callback('/\&lt\;\?php(.|\R)*?(\?\&gt\;|$)/', "php_section", $string);
 			// echo $pattern;
-			//$string = hide_any_quotation($string,0);
+			$string = hide_any_quotation($string,0);
 			check($string);
 			$string = preg_replace_callback($pattern,"handler_expression", $string);
 			check();
