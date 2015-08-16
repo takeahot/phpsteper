@@ -188,6 +188,7 @@
 				$condition,
 				$functions,
 				$collection_any_quotation,
+				$name_core_file_for_include,
 				$file_name;
 
 		foreach ($var_name_for_pass as $var_name) {
@@ -248,31 +249,15 @@
 		$path_to_file = implode(array_values($path_to_file));
 		$path_to_file = preg_replace("#".dirname(__FILE__)."/#","",$path_to_file);
 
-		$data['file'] = $path_to_file;
-		foreach ($var_name_for_pass as $var_name) {
-			if ($$var_name !== NULL) {
-				$data[$var_name] = $$var_name;
-			}
-		}
-
-		$json = json_encode($data,JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_FORCE_OBJECT);
-
-		$link = '<a class="a" href=\'javascript:sendData('.$json.');\'>'.$arr['arguments'][0].'</a>';
-		$local_pattern = "#".preg_quote($arr['arguments'][0],"#")."#";
-		//echo "<br> pattern - ".$pattern." endpattern";
-		//echo $string;
-		//echo $link;
-		$return['pattern'] = $local_pattern;
-		$return['inclusion'] = $link;
-		//echo $string;
-		if ($break_parse_file < 2) {
-
+		// if ($name_core_file_for_include == $file_name) {
+		if ($break_parse_file < 1) {
 			$clone_break_parse_file = $break_parse_file;
-			$var_for_cash = ['collection_any_comments','number_of_expressions','constants','file_name','dataCheck','collection_non_php_parts','condition','functions','collection_any_quotation'];
+			$var_for_cash = ['collection_any_comments','number_of_expressions','file_name','dataCheck','collection_non_php_parts','condition','functions','collection_any_quotation'];
 			foreach ($var_for_cash as $name_of_var) {
 				$new_name =  $name_of_var.$clone_break_parse_file;
 				$cash[$new_name] = $$name_of_var;  
 			}		
+			$cash['constants']['__file____phpsteper'] = $constants['__file____phpsteper'];
 			$new_name = "_POST".$clone_break_parse_file;
 			$cash[$new_name] = $_POST;
 			$dataCheck = "";
@@ -294,11 +279,33 @@
 				$new_name =  $name_of_var.$clone_break_parse_file;
 				$$name_of_var = $cash[$new_name]; 
 			}
+			$constants['__file____phpsteper'] = $cash['constants']['__file____phpsteper'];
 			$new_name = "_POST".$clone_break_parse_file;
 			$_POST = $cash[$new_name]; 
-			// $is_library = ($number_of_expressions[0] == count($functions)? TRUE : FALSE );
+			$is_library = ($number_of_expressions[0] == count($functions)? TRUE : FALSE );
 			// echo "is_library======================================================= $is_library <br />";
 		}
+
+		$data['file'] = $path_to_file;
+		foreach ($var_name_for_pass as $var_name) {
+			if ($$var_name !== NULL) {
+				$data[$var_name] = $$var_name;
+			}
+		}
+
+		$json = json_encode($data,JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_FORCE_OBJECT);
+		$text_link = $arr['arguments'][0];
+		if (isset($is_library)&&$is_library) {
+			$text_link = "<i>".$text_link."</i>";
+		}
+		$link = '<a class="a" href=\'javascript:sendData('.$json.');\'>'.$text_link.'</a>';
+		$local_pattern = "#".preg_quote($arr['arguments'][0],"#")."#";
+		//echo "<br> pattern - ".$pattern." endpattern";
+		//echo $string;
+		//echo $link;
+		$return['pattern'] = $local_pattern;
+		$return['inclusion'] = $link;
+		//echo $string;
 		return $return;
 	}
 
@@ -340,7 +347,7 @@
 		echo "<br /> <br />";
 */
 		global $number_of_expressions;
-		global $pattern;
+		global $pattern_alt;
 		global $condition;
 		global $dataCheck;
 		global $file_name;
@@ -361,7 +368,7 @@
 				array_push($condition, array(addslashes(hide_any_quotation($arg['condition'][$key_body],1)),$file_name,true));
 			}
 			$dataCheck = $body;
-			$new_body = preg_replace_callback($pattern,"handler_expression", $body);	
+			$new_body = preg_replace_callback($pattern_alt,"handler_expression", $body);	
 			check();
 			array_push($return['pattern'],"#".preg_quote($body,"#")."#");
 			array_push($return['inclusion'],$new_body);
@@ -373,15 +380,28 @@
 	}
 
 	function function_phpsteper ($arg) {
-		global $functions,$file_name; 
+		global $functions,$file_name,$pattern_alt,$dataCheck,$number_of_expressions; 
+
 		if ($functions === NULL) {
 			$functions = [];
 		}
+
+		$return['pattern'] = [];
+		$return['inclusion'] = [];
+
 		preg_match("#function[\s]+([\s\S]*?)[^\(]#",$arg['key'][0],$function_name);
 		array_push($functions,[$function_name[1],$arg['arguments'],$arg['body'],$file_name]);
-		$return['pattern'] = '#xxxxx#';
-		$return['inclusion'] = '#xxxxx#';
+
+		$new_body = preg_replace_callback($pattern_alt,function ($match) {
+			$match[0] = preg_replace("#^\s*#","$0 &nbsp;&nbsp;&nbsp;&nbsp;",$match[0]);
+			return $match[0];
+					},$arg['body'][0]);	
+		array_push($return['pattern'],"#".preg_quote($arg['body'][0],"#")."#");
+		array_push($return['inclusion'],$new_body);
+		echo "function_phpsteper";
+		var_dump_html($return);
 		return $return;
+
 	}
 
 	function wtf ($file_for_write,$string) {
@@ -504,7 +524,47 @@
 		return $array;
 	}
 
+	function check_pattern ($pattern_for_check,$string_for_check) {
+		$pattern_for_check = trim($pattern_for_check,"#");	
+		$pattern_for_check = stripslashes($pattern_for_check);
+		$string_for_check = stripslashes($string_for_check);
+		$start = 0;
+		$length = strlen($pattern_for_check);
+		echo "check pattern -- 11length - $length <br />";
+		var_dump_html($pattern_for_check);
+		var_dump_html($string_for_check);
+		$length_befor = 0;
+		$i = 0;
+		$limit = 100;
+		while (($length !== $length_befor)&&($i<$limit)) {
+			$i++;
+			echo "check pattern -- length - $length <br />";
+			$length_befor = $length;
+			if (/*preg_match("#".substr($pattern_for_check,$start,$length)."#",$string_for_check)*/strpos($string_for_check,$pattern_for_check) !== FALSE) {
+				$length = $length+(($length_last_lose-$length)-(($length_last_lose-$length)%2))/2;
+			} else {
+				$length_last_lose = $length;
+				$length = $length-($length-($length%2))/2;
+			}
+			if ($i == ($limit-1)) {
+				echo "<b> perebor </b>";
+			}
+		}
+		echo "check_pattern -- length - $length <br /> part of pattern - ".substr($pattern_for_check,0,$length)."<br />";
+		// $pattern_for_check = stripslashes($pattern_for_check);
+		// $string_for_check = preg_quote($string_for_check,"#");
+		$begin = strpos($string_for_check,substr($pattern_for_check,0,$length-1));
+		if ($begin === FALSE) {
+			echo 'begin is false <br />';
+		}
+		echo "diff letter from pattern --".substr($pattern_for_check,0,10)."++ from string --".substr($string_for_check,$begin,10)."++ <br />";
+		echo "diff letter from pattern --".substr($pattern_for_check,$length,10)."++ from string --".substr($string_for_check,$begin+$length,10)."++ <br />";
+	}	
+
 	function change_frag ($pattern_for_frag,$inclusion,$string) {
+
+		global $number_of_expressions;
+		$xxx = $pattern_for_frag;
 		if (is_array($pattern_for_frag)) {
 			foreach ($pattern_for_frag as $k => &$val) {
 				$val = htmlentities($val);
@@ -513,9 +573,16 @@
 		else {
 			$pattern_for_frag = htmlentities($pattern_for_frag);
 		}
+		check_pattern($xxx[0],$pattern_for_frag[0]);
 		$string = hide_any_quotation($string,1);
 		$string = htmlentities($string);
 		$return = preg_replace($pattern_for_frag, $inclusion, $string,-1,$count);
+		if ($number_of_expressions[0] < 2) {
+			echo "change_frag -- count - $count <br /> ";
+			// var_dump_html($string);
+			// var_dump_html($pattern_for_frag);
+			check_pattern ($pattern_for_frag[0],$string);
+		}
 		return $return;
 	}
 
@@ -578,6 +645,10 @@
 				//$mathc[0] is string with expression
 				$return = $func_name($arrfunc);
 				if ($return) {
+					if ($number_of_expressions[0] < 2) {
+						echo "handler_expression -- get return from func_name";
+						var_dump_html($return);
+					}
 					$match[0] = change_frag($return['pattern'],$return['inclusion'],$match[0]);
 				} else 
 				{
@@ -599,7 +670,7 @@
 		var_dump($match[0]);
 */		// var_dump($match[1]);
 		// var_dump($match[2]);
-		echo "<br />";
+		//echo "<br />";
 		$number_of_expressions_string = "";
 		foreach( $number_of_expressions as $val) {
 			$number_of_expressions_string = "&nbsp;&nbsp;&nbsp;&nbsp;".$number_of_expressions_string;
@@ -691,12 +762,17 @@
 
 	function check ($data = NULL) {
 
+
 		global $dataCheck; 
 		$count = 0;
 		if ($data == NULL) {
-		echo "<br> $data <br>";
-		echo "<b><br /> dataCheck: <br /> $dataCheck <br /></b>";
-			$dataCheck = '';
+			$data_ = preg_replace("#\s*#","",$data);
+			$dataCheck_ = preg_replace("#\s*#","",$dataCheck);
+			if (($data_ !== "")||($dataCheck_ !== "")){
+				echo "<br> $data";
+				echo "<b><br /> dataCheck: $dataCheck </b>";
+			}
+				$dataCheck = '';
 		}
 		else if (!$dataCheck){
 			$dataCheck = $data;
@@ -852,10 +928,10 @@
 
 	function parse_file ($file_for_parse,$echo = TRUE) {
 
-		global $pattern,$break_parse_file;
+		global $pattern_alt,$break_parse_file;
 		$break_parse_file++;
 		//show name presented file
-		echo '<br>'.ROOT."/".$file_for_parse.'<br>';
+		echo "parse_file -- ".ROOT."/".$file_for_parse.'<br>';
 		$file = fopen(ROOT."/".$file_for_parse,"r");
 		while (!feof($file)){
 			$string = fread($file,filesize($file_for_parse)+1);
@@ -867,7 +943,9 @@
 			// echo $pattern;
 			$string = hide_any_quotation($string,0);
 			check($string);
-			$string = preg_replace_callback($pattern,"handler_expression", $string);
+
+
+			$string = preg_replace_callback($pattern_alt,"handler_expression", $string);
 			check();
 			$string = hide_any_quotation($string,1);
 			$string = change_non_php($string,1);
@@ -884,6 +962,7 @@
 	}
 
 	function main () {
+		// phpinfo();
 		ini_set('display_errors',true);
 		error_reporting(E_ALL);
 		define ('ROOT',dirname(__FILE__));
@@ -903,6 +982,8 @@
 				$condition,
 				$functions,
 				$collection_any_quotation,
+				$name_core_file_for_include,
+				$pattern_alt,
 				$file_name;
 
 		$dataCheck = "";
@@ -930,9 +1011,17 @@
 			$file_name = $_POST['file'];
 			$constants['__file____phpsteper'] = ROOT."/".$file_name;
 		}
+		$name_core_file_for_include = $file_name;
 		var_dump_html($_POST);
 		echo "<br />";
 						
+
+//alternative pattern
+			$deep = 10;
+			$parenthesis = make_pattern_count_parentheses ($deep,"(");
+			$braces = make_pattern_count_parentheses ($deep,"{");
+			$pattern_alt = "#([^\(\{\;]*".$parenthesis.")*[^\{\;]*".$braces."*(\s*(else|else\s*if|elseif)\s*".$braces.")*\;?#";
+
 
 		if ((count($_POST)>0)&&($file_name = $_POST['file'])) {
 			parse_file($file_name);
@@ -944,4 +1033,3 @@
 	 </p>
 </body>
 </html>
-
