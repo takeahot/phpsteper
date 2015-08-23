@@ -191,6 +191,7 @@
 				$collection_any_quotation,
 				$name_core_file_for_include,
 				$include_deep_parse,
+				$is_library,
 				$file_name;
 
 		if ($include_deep_parse === NULL) {
@@ -256,7 +257,8 @@
 		$path_to_file = preg_replace("#".dirname(__FILE__)."/#","",$path_to_file);
 
 		// if ($name_core_file_for_include == $file_name) {
-		if ($break_parse_file < 1) {
+		if ($break_parse_file < 10) {
+			$include_deep_parse++;
 			$clone_break_parse_file = $break_parse_file;
 			$var_for_cash = ['collection_any_comments','number_of_expressions','file_name','dataCheck','collection_non_php_parts','collection_any_quotation'];
 			foreach ($var_for_cash as $name_of_var) {
@@ -273,6 +275,7 @@
 			// echo "include_phpsteper collection non php parts arter initialisation count -- ".count($collection_non_php_parts)."<br />";
 			$collection_any_comments = [];
 			$number_of_expressions = [0];
+			$is_library = TRUE;
 			$file_name = $path_to_file; 
 			// echo "include_phpsteper code new_name = $new_name <br />";
 			// echo "include_phpsteper file_name $file_name <br />";
@@ -281,6 +284,9 @@
 			$_POST['condition'] = $condition;
 			$_POST['constants'] = $constants;
 			$_POST['functions'] = $functions;
+			$clone_condition = $condition;
+			$clone_constants = $constants;
+			$clone_functions = $functions;
 			// echo "include_phpsteper -befor call parse_file <br />";
 			// echo "file_name is $file_name <br />";
 			// var_dump_html($_POST);
@@ -289,6 +295,7 @@
 			// var_dump_html($functions);
 			// echo "<br />";
 			parse_file ($path_to_file,FALSE);
+			$clone_is_library = $is_library;
 			// echo "include 2";
 			// echo "<br />";
 			// echo "include_phpsteper collection non php parts after parse_file count -- ".count($collection_non_php_parts)."<br />";
@@ -308,23 +315,37 @@
 			$new_name = "_POST".$clone_break_parse_file;
 			// echo "include_phpsteper decode new_name = $new_name <br />";
 			$_POST = $cash[$new_name]; 
+			$include_deep_parse--;
 		}
 
 		$data['file'] = $path_to_file;
 		foreach ($var_name_for_pass as $var_name) {
+			$poperty_name = $var_name;
+			if (isset($clone_constants)) {
+				$var_name = "clone_".$var_name;				
+			}
 			if ($$var_name !== NULL) {
-				$data[$var_name] = $$var_name;
+				$data[$poperty_name] = $$var_name;
 			}
 		}
+		if (isset($clone_constants)) {
+			foreach($var_name_for_pass as $var_name) {
+				$var_name = "clone_".$var_name;
+				unset($$var_name);			
+			}	
+		}
+		// echo "319 <br />";
+		// var_dump_html($functions);
 
 		$json = json_encode($data,JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_FORCE_OBJECT);
 		// echo "include_phpsteper ".$arr['arguments'][0]." <br />";
 		// var_dump_html($json);
 		$text_link = $arr['arguments'][0];
-		if (isset($is_library)&&$is_library) {
+		if (isset($clone_is_library)&&$clone_is_library) {
 			$text_link = "<i>".$text_link."</i>";
 		}
 		$link = '<a class="a" href=\'javascript:sendData('.$json.');\'>'.$text_link.'</a>';
+		// echo (show_tag($link));
 		$local_pattern = "#".preg_quote($arr['arguments'][0],"#")."#";
 		//echo "<br> pattern - ".$pattern." endpattern";
 		//echo $string;
@@ -402,7 +423,7 @@
 			$new_body = preg_replace_callback($pattern_alt,"handler_expression", $body);	
 			check();
 			array_push($return['pattern'],"#".preg_quote($body,"#")."#");
-			array_push($return['inclusion'],$new_body);
+			array_push($return['inclusion'],$new_body."\r\n");
 			$condition[count($condition)-1][2] = false;
 		}
 		array_pop($number_of_expressions);
@@ -494,7 +515,9 @@
 		$body = $arg['body'];
 		foreach ($body as &$val) {
 			// echo "function function val = $val <br />";
-			$val = hide_any_quotation($val,1);
+			$val = hide_any_quotation($val,1,1);
+			$val = hide_any_comments($val,1,1); 
+			$val = change_non_php($val,1,1);
 			// echo "function function 22 val = $val <br />";
 		}
 		array_push($functions,[$function_name[1],$arguments,$body,$file_name]);
@@ -628,7 +651,6 @@
 			// echo $string."<br />";
 			$exists_braces = preg_match('/'.make_pattern_count_parentheses(100,"{").'/',$string,$braces);
 			if ($exists_braces) {
-				// echo $braces[0]."<br />";
 				$pos_braces = strpos($string,$braces[0]);
 			}
 			if ($exists_parentheses||$exists_braces) {
@@ -696,7 +718,6 @@
 		debug (__FUNCTION__);
 
 		global $number_of_expressions;
-		$xxx = $pattern_for_frag;
 		if (is_array($pattern_for_frag)) {
 			foreach ($pattern_for_frag as $k => &$val) {
 				$val = htmlentities($val);
@@ -722,7 +743,7 @@
 	function handler_expression ($match) {
 		debug (__FUNCTION__);
 
-		global $correspond_table,$file_name,$name_core_file_for_include;
+		global $correspond_table,$file_name,$name_core_file_for_include,$is_library,$include_deep_parse;
 		global $number_of_expressions;
 		global $dataCheck;
 		$return_expression = "";
@@ -735,9 +756,14 @@
 		// if ($number_of_expressions == [1]) {
 /*			echo "<br /> handler_expression - ";
 			var_dump($number_of_expressions);
-			echo " <br />";
-			var_dump($match[0]);*/
+			echo " <br />"; */
+/*			if ($number_of_expressions[0] == 2) {
+				var_dump_html($match[0]);
+			}*/
 		// }
+		if (!(isset($include_deep_parse))||($include_deep_parse < 1)) {
+			echo ("752 ".$match[0]."<br /> <br />");
+		}
 
 
 		//delete expression equal ";" or contain only \s sings
@@ -761,6 +787,7 @@
 		$ma = preg_replace_callback(make_pattern_arr($correspond_table),"key_part",$m[0],1,$count);
 		if (!$count) {
 			$match[0] = htmlentities($match[0]);
+			$is_library = FALSE;
 			// echo "handler_expression: no key part <br /> match[0] = ".$match[0]."<br />";
 		}
 		// if keypart exists
@@ -769,6 +796,9 @@
 			
 			// assign $key 	last defined key ( key defined in key_part function by key_def() function)
 			$key = key_def();
+			if ($key !== "function") {
+				$is_library = FALSE;
+			}
 
 
 			$arrfunc = parse_func ($match[0],$key);
@@ -779,6 +809,10 @@
 				echo $number_of_expressions[count($number_of_expressions)-1]."   ";
 				echo "handler_expression -- $key <br />";
 			}*/
+/*			if ($number_of_expressions[0] == 2) {
+				var_dump_html($match[0]);
+				echo "<br />";
+			}*/
 			if (function_exists($key."_phpsteper")) {
 				$func_name = $key."_phpsteper";
 				//$arrfunc is all function's parts in arr. $arrfunc = [key,arguments,body];
@@ -788,7 +822,9 @@
 					// if ($number_of_expressions[0] < 2) {
 						// echo "handler_expression -- get return from func_name";
 						// var_dump_html($return);
-				// }
+						// echo "<br />";
+					// }
+
 					$match[0] = change_frag($return['pattern'],$return['inclusion'],$match[0]);
 				} else 
 				{
@@ -955,7 +991,7 @@
 		return "; --__".$count."__-- ";
 	}
 
-	function change_non_php($string,$htmlswitch) {
+	function change_non_php($string,$htmlswitch = 0,$without_color = 0) {
 		debug (__FUNCTION__);
 
 		global $collection_non_php_parts;
@@ -965,12 +1001,30 @@
 			//echo $string;
 		}
 		else {
-			$string = preg_replace_callback ("#\-\-\_\_\d{6}\_\_\-\-#", function ($match) { 
-				global $collection_non_php_parts,$file_name; 
-				$index = trim($match[0],"-_"); 
-				// echo $match[0]." -- change_non_php $file_name ".ltrim($index,"0")."<br />";
-				return "<span style='color:darkslategray;'>".htmlentities($collection_non_php_parts[ltrim($index,"0")-1])."</span>"; 
-			},$string);
+/*			while(1) {
+				if (preg_match("#\-\-\_\_\d{6}\_\_\-\-#",$string,$m,PREG_OFFSET_CAPTURE,$m[0][1]+1)) {
+					echo show_tag(substr($string,0,$m[0][1]+strlen($m[0][0])))."<br />";
+					echo "<b> big break <br /> line <br /> -------------------------------------------------------------------------</b><br />";
+					// var_dump_html($match);
+				}else {
+					break;
+				};
+			}*/
+			if ($without_color) {
+				$string = preg_replace_callback ("#\-\-\_\_\d{6}\_\_\-\-#", function ($match) { 
+					global $collection_non_php_parts,$file_name; 
+					$index = trim($match[0],"-_"); 
+					// echo $match[0]." -- change_non_php $file_name ".ltrim($index,"0")."<br />";
+					return $collection_non_php_parts[ltrim($index,"0")-1]; 
+				},$string);
+			} else {
+				$string = preg_replace_callback ("#\-\-\_\_\d{6}\_\_\-\-#", function ($match) { 
+					global $collection_non_php_parts,$file_name; 
+					$index = trim($match[0],"-_"); 
+					// echo $match[0]." -- change_non_php $file_name ".ltrim($index,"0")."<br />";
+					return "<span style='color:darkslategray;'>".htmlentities($collection_non_php_parts[ltrim($index,"0")-1])."</span>"; 
+				},$string);
+			}
 		}
 		return $string;
 	}
@@ -1001,7 +1055,7 @@
 		}
 	}
 
-	function hide_any_comments ($string,$comments_switch) {
+	function hide_any_comments ($string,$comments_switch = 0,$without_color = 0) {
 		debug (__FUNCTION__);
 			global $collection_any_comments;
 		if (!$comments_switch) {
@@ -1010,11 +1064,21 @@
 			//echo $string;
 		}
 		else {
-		$string = preg_replace_callback ("#\-\-\=\=\d{6}\=\=\-\-#", function ($match) { 
-				global $collection_any_comments;
-				$index = trim($match[0],"=-"); 
-				return "<span style='color:slategray;'>".htmlentities($collection_any_comments[ltrim($index,"0")-1])."</span>"; 
-			},$string);
+			if ($without_color) {
+				$string = preg_replace_callback ("#\-\-\=\=\d{6}\=\=\-\-#", function ($match) { 
+					global $collection_any_comments;
+					$index = trim($match[0],"=-"); 
+					return $collection_any_comments[ltrim($index,"0")-1]; 
+				},$string);
+			} else 
+			{
+				$string = preg_replace_callback ("#\-\-\=\=\d{6}\=\=\-\-#", function ($match) { 
+					global $collection_any_comments;
+					$index = trim($match[0],"=-"); 
+					return "<span style='color:slategray;'>".htmlentities($collection_any_comments[ltrim($index,"0")-1])."</span>"; 
+				},$string);
+
+			}
 		}
 		return $string;
 		
@@ -1042,7 +1106,7 @@
 		return "--++".$count."++--";
 	}
 
-	function hide_any_quotation ($string,$quotation_switch) {
+	function hide_any_quotation ($string,$quotation_switch = 0,$without_color = 0) {
 		debug (__FUNCTION__);
 			global $collection_any_quotation;
 			// echo "hide_any_quotation $string <b> end </b><br />";
@@ -1053,11 +1117,19 @@
 		}
 		else {
 			// echo "hide_any_quotation 1 $string <br />";
-			$string = preg_replace_callback ("#\-\-\+\+\d{6}\+\+\-\-#", function ($match) { 
-				global $collection_any_quotation; 
-				$index = trim($match[0],"+-"); 
-				return htmlentities($collection_any_quotation[ltrim($index,"0")-1]); 
-			},$string);
+			if ($without_color){
+				$string = preg_replace_callback ("#\-\-\+\+\d{6}\+\+\-\-#", function ($match) { 
+					global $collection_any_quotation; 
+					$index = trim($match[0],"+-"); 
+					return $collection_any_quotation[ltrim($index,"0")-1]; 
+				},$string);
+			} else {
+				$string = preg_replace_callback ("#\-\-\+\+\d{6}\+\+\-\-#", function ($match) { 
+					global $collection_any_quotation; 
+					$index = trim($match[0],"+-"); 
+					return htmlentities($collection_any_quotation[ltrim($index,"0")-1]); 
+				},$string);
+			}
 		}
 		return $string;
 		
@@ -1109,7 +1181,7 @@
 	function parse_file ($file_for_parse,$echo = TRUE) {
 		debug (__FUNCTION__);
 
-		global $pattern_alt,$break_parse_file;
+		global $pattern_alt,$break_parse_file,$file_name,$collection_non_php_parts;
 		$break_parse_file++;
 		//show name presented file
 		if (file_exists(ROOT."/".$file_for_parse)) {
@@ -1125,7 +1197,7 @@
 			//comments to -_000000_-
 			$string = hide_any_comments($string,0);
 			//$string = preg_replace_callback('/\&lt\;\?php(.|\R)*?(\?\&gt\;|$)/', "php_section", $string);
-			// echo $pattern;
+			// echo $pattern_alt;
 			// echo "parse_file hide_any_quotation open <br />";
 			$string = hide_any_quotation($string,0);
 			$string = correct_if($string);
@@ -1133,13 +1205,14 @@
 			$string = preg_replace_callback($pattern_alt,"handler_expression", $string);
 			check();
 			// echo "parse_file hide_any_quotation close <br />";
+			if ($echo) {
 			$string = hide_any_quotation($string,1);
+			// echo "parse_file ------------------ file_name = $file_name, count(collection_non_php_parts) =".count($collection_non_php_parts)."<br />";
 			$string = change_non_php($string,1);
 			$string = hide_any_comments($string,1);
 			/* echo "<br /> collection_non_php_parts <br />";
 			var_dump($collection_non_php_parts);
 			echo " <br />";*/
-			if ($echo) {
 				echo "result <br> ======================== <br> <br> <br>";
 				echo nl2br($string);
 			}
@@ -1170,10 +1243,11 @@
 				$collection_any_quotation,
 				$name_core_file_for_include,
 				$pattern_alt,
+				$is_library,
 				$debug,
 				$file_name;
 
-		$debug = 1;
+		$debug = 0;
 
 		debug (__FUNCTION__);
 
@@ -1182,6 +1256,7 @@
 		$collection_any_comments = [];
 		$number_of_expressions = [0];
 		$break_parse_file = 0;
+		$is_library = TRUE;
 
 		$correspond_table['define'] = ['color: blue'];
 		$correspond_table['error_reporting'] = ['color: blue'];
@@ -1208,10 +1283,10 @@
 						
 
 //alternative pattern
-			$deep = 100;
+			$deep = 10;
 			$parenthesis = make_pattern_count_parentheses ($deep,"(");
 			$braces = make_pattern_count_parentheses ($deep,"{");
-			$pattern_alt = "#([^\(\{\;]*".$parenthesis.")*[^\{\;]*".$braces."*(\s*(else|else\s*if|elseif)\s*(".$parenthesis."/s*)*".$braces.")*\;?#";
+			$pattern_alt = "#([^\(\{\;]*".$parenthesis.")*[^\{\;]*".$braces."*(\s*(else|else\s*if)\s*(".$parenthesis."\s*)*".$braces.")*\;?#";
 
 		if ((count($_POST)>0)&&($file_name = $_POST['file'])) {
 			parse_file($file_name);
