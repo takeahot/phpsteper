@@ -160,19 +160,20 @@
 		debug (__FUNCTION__);
 		//$arr['arguments'][0] = hide_any_quotation($arr['arguments'][0],1);
 		// echo "<br /> arr['arguments'][0] - --".$arr['arguments'][0]."--";
-		$arr['arguments'][0] = trim ($arr['arguments'][0],'\'\" ');
-		$arr['arguments'][0] = preg_replace("#^&quot\;|&quot\;$#","",$arr['arguments'][0]);
+		$name_of_constant = trim ($arr['arguments'][0],'\'\" ');
+		$name_of_constant = preg_replace("#^&quot\;|&quot\;$#","",$name_of_constant);
 		// echo "arr['arguments'][1] - --".$arr['arguments'][1]."--";
 		// $arr['arguments'][1] = hide_any_quotation($arr['arguments'][1],1);
 		// echo "arr['arguments'][1] - --".$arr['arguments'][1]."--";
-		$constant_val = change_constants(trim ($arr['arguments'][1]," "));
+		// $constant_val = change_constants(trim ($arr['arguments'][1]," "));
 		// echo "change_constants - --".$constant_val."--";
-		$constants[strtolower($arr['arguments'][0])."__phpsteper"] = $constant_val;
+		// $constants[strtolower($arr['arguments'][0])."__phpsteper"] = $constant_val;
+		return [define($name_of_constant."__PHPSTEPER",trim ($arr['arguments'][1]," "))];
 //   		echo "name constant - ".strtolower($arr['arguments'][0])."__phpsteper"." which value is ".$constants[strtolower($arr['arguments'][0])."__phpsteper"];
 	}
 
 
-	function include_phpsteper ($arr,$once = 0) {
+	function include_phpsteper ($func_parts,$once = 0) {
 		debug (__FUNCTION__);
 		//echo "<br> arr <br>";
 		//var_dump($arr);
@@ -204,9 +205,9 @@
 		}
 		$data = [];
 		// echo "include_phpsteper hide_any_quotation open <br />";
-		$arr['arguments'][0] = hide_any_quotation($arr['arguments'][0],1);
+		$func_parts['arguments'][0] = hide_any_quotation($func_parts['arguments'][0],1);
 		//first argument from call function include
-		$path_to_file = $arr['arguments'][0];	
+		$path_to_file = $func_parts['arguments'][0];	
 		//resolve constant
 		$path_to_file = change_constants($path_to_file);
 		//result dirname
@@ -229,32 +230,35 @@
 
 		//for resolve concantenation
 		//devide path by . and put in array 
-		$path_to_file = explode(".",$path_to_file);
+		// $path_to_file = explode(".",$path_to_file);
 
 		//check either . in quotation or not
 		//and connect to value if . in quotation
-		$countq = 0;
-		$count2q = 0;
-		foreach ($path_to_file as &$val) {
+		// $countq = 0;
+		// $count2q = 0;
+		// foreach ($path_to_file as &$val) {
 //	   			echo "<br> arguments <br> val = $val";
-			$countq += preg_match_all("/'/",$val); 
-			$count2q += preg_match_all("/\&quot;/",$val);
+			// $countq += preg_match_all("/'/",$val); 
+			// $count2q += preg_match_all("/\&quot;/",$val);
 //	   			echo "<br> countq = $countq <br> count2q = $count2q <br>";
-			if (($countq & 1)||($count2q & 1)) {
-				$current = current($path_to_file);	
-				$countq += preg_match_all("/'/",$current); 
-				$count2q += preg_match_all("/\&quot;/",$current);   				
-				$val .= ".".$current;	
-				unset($path_to_file[key($path_to_file)]);
-			}
-		}
+			// if (($countq & 1)||($count2q & 1)) {
+				// $current = current($path_to_file);	
+				// $countq += preg_match_all("/'/",$current); 
+				// $count2q += preg_match_all("/\&quot;/",$current);   				
+				// $val .= ".".$current;	
+				// unset($path_to_file[key($path_to_file)]);
+			// }
+		// }
 		//delete all \ ' and " from start and finish value 
-		foreach ($path_to_file as &$val) {
-			$val = trim($val,"\' ");
-			$val = preg_replace("#^&quot\;|&quot\;$#","",$val);
-		}
+		// foreach ($path_to_file as &$val) {
+			// $val = trim($val,"\' ");
+			// $val = preg_replace("#^&quot\;|&quot\;$#","",$val);
+		// }
 		// connect array into string
-		$path_to_file = implode(array_values($path_to_file));
+		// $path_to_file = implode(array_values($path_to_file));
+
+		$path_to_file = hide_any_quotation($path_to_file);
+		$path_to_file = preg_replace("#.#","",$path_to_file);
 		$path_to_file = preg_replace("#".dirname(__FILE__)."/#","",$path_to_file);
 		if ($once) {
 			foreach ($included_files as $val) {
@@ -271,12 +275,12 @@
 		if ($break_parse_file < 10) {
 			$include_deep_parse++;
 			$clone_break_parse_file = $break_parse_file;
-			$var_for_cash = ['collection_any_comments','number_of_expressions','file_name','dataCheck','collection_non_php_parts','collection_any_quotation'];
+			$var_for_cash = ['collection_any_comments','number_of_expressions','file_name','dataCheck','collection_non_php_parts','collection_any_quotation','is_library'];
 			foreach ($var_for_cash as $name_of_var) {
 				$new_name =  $name_of_var.$clone_break_parse_file;
 				$cash[$new_name] = $$name_of_var;  
 			}		
-			$cash['constants']['__file____phpsteper'] = $constants['__file____phpsteper'];
+			$cash['__FILE____PHPSTEPER'] = __FILE____PHPSTEPER;
 			$new_name = "_POST".$clone_break_parse_file;
 			$cash[$new_name] = $_POST;
 			$dataCheck = "";
@@ -290,13 +294,13 @@
 			$file_name = $path_to_file; 
 			// echo "include_phpsteper code new_name = $new_name <br />";
 			// echo "include_phpsteper file_name $file_name <br />";
-			$constants['__file____phpsteper'] = ROOT."/".$file_name;
+			define("__FILE____PHPSTEPER",ROOT."/".$file_name);
 			$_POST['file'] = $path_to_file;
 			$_POST['condition'] = $condition;
 			$_POST['constants'] = $constants;
 			$_POST['functions'] = $functions;
 			$clone_condition = $condition;
-			$clone_constants = $constants;
+			$clone_constants = get_defined_constants(TRUE)['user'];
 			$clone_functions = $functions;
 			// echo "include_phpsteper -befor call parse_file <br />";
 			// echo "file_name is $file_name <br />";
@@ -305,7 +309,13 @@
 			// echo "include 1";
 			// var_dump_html($functions);
 			// echo "<br />";
-			parse_file ($path_to_file,FALSE);
+			$not_return = 0;
+			if (file_exists(ROOT."/".$path_to_file)) {
+				// echo ("parse_file -- ".ROOT."/".$file_for_parse.'<br>');
+				parse_file ($path_to_file,FALSE);
+			} else {
+				$not_return = 1;
+			}		
 			$clone_is_library = $is_library;
 			// echo "include 2";
 			// echo "<br />";
@@ -322,11 +332,55 @@
 			}*/
 			// echo "indlude_phpsteper after parse_file == number_of expression -- ".$number_of_expressions[0]." count(functions) -- ".count($functions)."<br />";
 			// echo "include_phpsteper exit to file_name $file_name <br />";
-			$constants['__file____phpsteper'] = $cash['constants']['__file____phpsteper'];
+			define('__FILE____PHPSTEPER',$cash['__FILE____PHPSTEPER']);
 			$new_name = "_POST".$clone_break_parse_file;
 			// echo "include_phpsteper decode new_name = $new_name <br />";
 			$_POST = $cash[$new_name]; 
 			$include_deep_parse--;
+		}
+		$arr_for_extra = ['path_to_file','clone_constants','clone_functions','clone_condition','clone_is_library'];
+		foreach ($arr_for_extra as $val) {
+			$extra[$val] = $$val;
+		}
+
+		if (isset($clone_constants)) {
+			foreach($var_name_for_pass as $var_name) {
+				$var_name = "clone_".$var_name;
+				unset($$var_name);			
+			}	
+		}
+
+		if (!$not_return) {
+			return [TRUE,$extra];
+		}
+	}
+
+	function include_phpsteper_show($func_parts,$extra) {
+
+		debug (__FUNCTION__);
+		//echo "<br> arr <br>";
+		//var_dump($arr);
+		//echo "<br> endarr <br>";
+		global $number_of_expressions,
+				$correspond_table,
+				$pattern,
+				$var_name_for_pass,
+				$constants,
+				$break_parse_file,
+				$collection_any_comments,
+				$dataCheck,
+				$collection_non_php_parts,
+				$condition,
+				$functions,
+				$collection_any_quotation,
+				$name_core_file_for_include,
+				$include_deep_parse,
+				$is_library,
+				$included_files,
+				$file_name;
+
+		foreach ($extra as $key => $val) {
+			$$key = $val;
 		}
 
 		$data['file'] = $path_to_file;
@@ -339,25 +393,20 @@
 				$data[$poperty_name] = $$var_name;
 			}
 		}
-		if (isset($clone_constants)) {
-			foreach($var_name_for_pass as $var_name) {
-				$var_name = "clone_".$var_name;
-				unset($$var_name);			
-			}	
-		}
+
 		// echo "319 <br />";
 		// var_dump_html($functions);
 
 		$json = json_encode($data,JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_FORCE_OBJECT);
 		// echo "include_phpsteper ".$arr['arguments'][0]." <br />";
 		// var_dump_html($json);
-		$text_link = $arr['arguments'][0];
+		$text_link = $func_parts['arguments'][0];
 		if (isset($clone_is_library)&&$clone_is_library) {
 			$text_link = "<i>".$text_link."</i>";
 		}
 		$link = '<a class="a" href=\'javascript:sendData('.$json.');\'>'.$text_link.'</a>';
 		// echo (show_tag($link));
-		$local_pattern = "#".preg_quote($arr['arguments'][0],"#")."#";
+		$local_pattern = "#".preg_quote($func_parts['arguments'][0],"#")."#";
 		//echo "<br> pattern - ".$pattern." endpattern";
 		//echo $string;
 		//echo $link;
@@ -428,6 +477,7 @@
 		array_push($number_of_expressions,0);
 		foreach ($arg['body'] as $key_body => $body) {
 			if (isset($arg['condition'][$key_body])) {
+				handler_expression($arg['condition'][$key_body],0,'condition');
 				array_push($condition, array(addslashes(hide_any_quotation($arg['condition'][$key_body],1)),$file_name,true));
 			}
 			$dataCheck = $body;
@@ -499,6 +549,13 @@
 		$constants['__file____phpsteper'] = $cash['constants']['__file____phpsteper'];
 		$new_name = "_POST".$clone_break_parse_file;
 		$_POST = $cash[$new_name]; 
+	}
+
+	function isset_phpsteper ($var) {
+		global $variable;
+		if (isset($variable[$var])) {
+			return TRUE;
+		};
 	}
 
 	function function_phpsteper ($arg) {
@@ -751,7 +808,7 @@
 		return $return;
 	}
 
-	function handler_expression ($match) {
+	function handler_expression ($match,$echo = 1,$type = "") {
 		debug (__FUNCTION__);
 
 		global $correspond_table,$file_name,$name_core_file_for_include,$is_library,$include_deep_parse;
@@ -772,65 +829,78 @@
 				var_dump_html($match[0]);
 			}*/
 		// }
-		if (!(isset($include_deep_parse))||($include_deep_parse < 1)) {
+		if (!isset($included_deep_parse)) {
+			$included_deep_parse = 0;
+		}
+		if ($include_deep_parse < 1) {
 			echo ("752 ".$match[0]."<br /> <br />");
-		}
 
 
-		//delete expression equal ";" or contain only \s sings
-		if ((trim($match[0]) == ";")||(trim($match[0]) == "")) {
-			return "";
-		}
-
-		++$number_of_expressions[count($number_of_expressions)-1];
-		//var_dump($number_of_expressions);
-
-
-
-		//=== Check type of expression;
-		$deep = 10;
-		$parenthesis = make_pattern_count_parentheses ($deep,"(");
-		$braces = make_pattern_count_parentheses ($deep,"{");
-		$check_type = preg_replace("#\-\-\_\_\d{6}\_\_\-\-|\-\-\=\=\d{6}\=\=\-\-#","",$match[0]);
-		$check_type = trim($check_type);
-		if (preg_match("#^\\$\w+#",$check_type,$variable)) {
-			echo $variable[0];		
-		}
-		if (preg_match("#^\w+#",$check_type,$word)) {
-			echo $word[0];
-			$key = $word[0];
-			$key_inclusion = "<span style='".$correspond_table[$key][0]."'>".$key."</span>"
-			if ($key !== "function") {
-				$is_library = false;
+			//delete expression equal ";" or contain only \s sings
+			if ((trim($match[0]) == ";")||(trim($match[0]) == "")) {
+				return "";
 			}
-			$arrfunc = parse_func ($match[0],$key);
-			if (function_exists($key."_phpsteper")) {
-				$func_name = $key."_phpsteper";
-				//$arrfunc is all function's parts in arr. $arrfunc = [key,arguments,body];
-				//$mathc[0] is string with expression
-				$return = $func_name($arrfunc);
-				if (($return)&&($return['pattern'] !== "")) {
-					// if ($number_of_expressions[0] < 2) {
-						// echo "handler_expression -- get return from func_name";
-						// var_dump_html($return);
-						// echo "<br />";
-					// }
 
-				$match[0] = change_frag($return['pattern'],$return['inclusion'],$match[0]);
+			++$number_of_expressions[count($number_of_expressions)-1];
+			//var_dump($number_of_expressions);
+
+
+
+			//=== Check type of expression;
+			$deep = 10;
+			$parenthesis = make_pattern_count_parentheses ($deep,"(");
+			$braces = make_pattern_count_parentheses ($deep,"{");
+			$check_type = preg_replace("#\-\-\_\_\d{6}\_\_\-\-|\-\-\=\=\d{6}\=\=\-\-#","",$match[0]);
+			$check_type = trim($check_type);
+			if (preg_match("#\!#",$check_type,$not)) {
+				handler_expression(ltrim($match[0],"!"),1,'not');
+			}
+			if (preg_match("#^\\$\w+#",$check_type,$variable)) {
+				echo $variable[0];		
+			}
+			if (preg_match("#^\w+#",$check_type,$word)) {
+				$key = $word[0];
+				$key_inclusion = "<span style='".$correspond_table[$key][0]."'>".$key."</span>";
+				if ($key !== "function") {
+					$is_library = FALSE;
+				}
+				$arrfunc = parse_func ($match[0],$key);
+				if (function_exists($key."_phpsteper")) {
+					$func_name = $key."_phpsteper";
+					$return_all = $func_name($arrfunc);
+					// echo "function handler_expression key._phpsteper return";
+					// var_dump_html($return);
+					// echo "<br />";
+				}
+					//$arrfunc is all function's parts in arr. $arrfunc = [key,arguments,body];
+					//$mathc[0] is string with expression
+				if (function_exists($key."_phpsteper_show")) {
+					$func_name = $key."_phpsteper_show";
+					$return = $func_name($arrfunc,$return_all[1]);
+					if (($return)&&($return['pattern'] !== "")) {
+						// if ($number_of_expressions[0] < 2) {
+							// echo "handler_expression -- get return from func_name";
+							// var_dump_html($return);
+							// echo "<br />";
+						// }
+
+					$match[0] = change_frag($return['pattern'],$return['inclusion'],$match[0]);
+					} else 
+					{
+						$match[0] = htmlentities($match[0]);
+					}
 				} else 
 				{
-					$match[0] = htmlentities($match[0]);
+						$match[0] = htmlentities($match[0]);
 				}
-			} else 
-			{
-					$match[0] = htmlentities($match[0]);
 			}
-		}
-		if (preg_match("#\\$*\w+\s*".$parenthesis."\s*".$braces."#",$match[0],$function)) {
-			echo $function[0]."<br />";
-		}
-		//part for key() {} type of expression;;
+			$match[0] = preg_replace("#".preg_quote($key,"#")."#",$key_inclusion,$match[0],1);	
+			if (preg_match("#\\$*\w+\s*".$parenthesis."\s*".$braces."#",$match[0],$function)) {
+				echo $function[0]."<br />";
+			}
+			//part for key() {} type of expression;;
 
+		}
 
 
 		/*find keypart in space befor parentheses and seve in $ma;
@@ -850,7 +920,7 @@
 			// echo "handler_expression: no key part <br /> match[0] = ".$match[0]."<br />";
 		// }
 		// if keypart exists
-		else {
+		// else {
 			// replace all befor first parenthesis by key part
 			
 			// assign $key 	last defined key ( key defined in key_part function by key_def() function)
@@ -915,7 +985,9 @@
 			// $match[0] = $number_of_expressions[count($number_of_expressions)-1]." ".$match[0];
 		// }
 		// echo "handler_expression == ".$number_of_expressions[0]."  <br />";
-		return  $match[0];
+		if ($echo) {
+			return  $match[0];
+		}
 	}
 
 	function make_pattern_arr ($arr) {
@@ -1304,7 +1376,9 @@
 				$pattern_alt,
 				$is_library,
 				$debug,
-				$included_files;
+				$included_files,
+				$variables,
+				$variables_info,
 				$file_name;
 
 		$debug = 0;
@@ -1314,6 +1388,8 @@
 		$dataCheck = "";
 		$collection_non_php_parts = [];
 		$collection_any_comments = [];
+		$variables = [];
+		$variables_info = [];
 		$number_of_expressions = [0];
 		$break_parse_file = 0;
 		$is_library = TRUE;
@@ -1335,7 +1411,7 @@
 		} 	
 		if (!empty($_POST['file'])){
 			$file_name = $_POST['file'];
-			$constants['__file____phpsteper'] = ROOT."/".$file_name;
+			define('__FILE____PHPSTEPER',ROOT."/".$file_name);
 		}
 		$included_files = [$file_name];
 		$name_core_file_for_include = $file_name;
