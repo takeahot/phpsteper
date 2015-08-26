@@ -205,7 +205,6 @@
 		}
 		$data = [];
 		// echo "include_phpsteper hide_any_quotation open <br />";
-		$func_parts['arguments'][0] = hide_any_quotation($func_parts['arguments'][0],1);
 		//first argument from call function include
 		$path_to_file = $func_parts['arguments'][0];	
 		//resolve constant
@@ -256,9 +255,9 @@
 		// }
 		// connect array into string
 		// $path_to_file = implode(array_values($path_to_file));
-
-		$path_to_file = hide_any_quotation($path_to_file);
-		$path_to_file = preg_replace("#.#","",$path_to_file);
+		$path_to_file = preg_replace_callback ("#\"[^\"]*\"|\'[^\']*\'#","replace_any_quotation",$path_to_file );
+		$path_to_file = preg_replace("#\.#","",$path_to_file);
+		$path_to_file = hide_any_quotation($path_to_file,1);
 		$path_to_file = preg_replace("#".dirname(__FILE__)."/#","",$path_to_file);
 		if ($once) {
 			foreach ($included_files as $val) {
@@ -280,7 +279,7 @@
 				$new_name =  $name_of_var.$clone_break_parse_file;
 				$cash[$new_name] = $$name_of_var;  
 			}		
-			$cash['__FILE____PHPSTEPER'] = __FILE____PHPSTEPER;
+			$cash['constants']['__file____phpsteper'] = $constants['__file____phpsteper'];
 			$new_name = "_POST".$clone_break_parse_file;
 			$cash[$new_name] = $_POST;
 			$dataCheck = "";
@@ -294,7 +293,7 @@
 			$file_name = $path_to_file; 
 			// echo "include_phpsteper code new_name = $new_name <br />";
 			// echo "include_phpsteper file_name $file_name <br />";
-			define("__FILE____PHPSTEPER",ROOT."/".$file_name);
+			$constatns["__file____phpsteper"] = ROOT."/".$file_name;
 			$_POST['file'] = $path_to_file;
 			$_POST['condition'] = $condition;
 			$_POST['constants'] = $constants;
@@ -332,7 +331,7 @@
 			}*/
 			// echo "indlude_phpsteper after parse_file == number_of expression -- ".$number_of_expressions[0]." count(functions) -- ".count($functions)."<br />";
 			// echo "include_phpsteper exit to file_name $file_name <br />";
-			define('__FILE____PHPSTEPER',$cash['__FILE____PHPSTEPER']);
+			$constants['__file____phpsteper'] = $cash['constants']['__file____phpsteper'];
 			$new_name = "_POST".$clone_break_parse_file;
 			// echo "include_phpsteper decode new_name = $new_name <br />";
 			$_POST = $cash[$new_name]; 
@@ -674,6 +673,7 @@
 				$string_check = preg_replace("#\s*".make_pattern_count_parentheses()."*\s*#","",$string);
 				if (!preg_match("#".$val.";*$#",$string_check)) {
 					preg_match("#".$val."([\s\S]*);*#",$string,$match);
+					echo "678 if without parenthesis <br />";
 					$array['arguments'][0] = hide_any_quotation($match[1],1); 
 				}	
 			}
@@ -682,27 +682,9 @@
 		if ($array['arguments'][0] === "") {
 			preg_match('/'.make_pattern_count_parentheses().'/',$string,$argstr);
 			if (isset($argstr[0])) {
-				$argstr = trim($argstr[0],"; ");
-				$argstr = preg_replace("#^\(|\)$#","",$argstr);
-				$argarr = explode(",",$argstr);
-
-				$countq = 0;
-				$count2q = 0;
-				foreach ($argarr as &$val) {
-	//	   			echo "<br> arguments <br> val = $val";
-					$pat2q = "/\&quot;/";
-					$countq += preg_match_all("/'/",$val); 
-					$count2q += preg_match_all($pat2q,$val);
-	//	   			echo "<br> countq = $countq <br> count2q = $count2q <br>";
-					if (($countq & 1)||($count2q & 1)) {
-						$current = current($argarr);	
-						$countq += preg_match_all("/'/",$current); 
-						$count2q += preg_match_all($pat2q,$current);   				
-						$val .= ",".$current;	
-						unset($argarr[key($argarr)]);
-					}
-				}
-				$array['arguments'] = array_values($argarr);
+				$argstr[0] = preg_replace("#^\(|\)$#","",$argstr[0]);
+				$argarr = explode(",",$argstr[0]);
+				$array['arguments'] = $argarr;
 				$array['arguments'] = hide_any_quotation_arr ($array['arguments'],1);	
 			}
 		}	
@@ -814,12 +796,22 @@
 		global $correspond_table,$file_name,$name_core_file_for_include,$is_library,$include_deep_parse;
 		global $number_of_expressions;
 		global $dataCheck;
+
+	
 		$return_expression = "";
 /*		if (preg_match("#WP_CONTENT_DIR#",$match[0])) {
 			echo "handler_experssion !!!!!! $file_name !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1finded WP_CONTENT_DIR <br />";
 		};*/
-		// echo $match[0]."<br />";
+		echo "match".$match[0]."<br />";
+		echo "file_name".$file_name."<br />";
 		check($match[0]);	
+
+
+		//delete expression equal ";" or contain only \s sings
+		if ((trim($match[0]) == ";")||(trim($match[0]) == "")) {
+			echo "831 <br />";
+			return "";
+		}
 
 		// if ($number_of_expressions == [1]) {
 /*			echo "<br /> handler_expression - ";
@@ -836,10 +828,6 @@
 			echo ("752 ".$match[0]."<br /> <br />");
 
 
-			//delete expression equal ";" or contain only \s sings
-			if ((trim($match[0]) == ";")||(trim($match[0]) == "")) {
-				return "";
-			}
 
 			++$number_of_expressions[count($number_of_expressions)-1];
 			//var_dump($number_of_expressions);
@@ -852,12 +840,15 @@
 			$braces = make_pattern_count_parentheses ($deep,"{");
 			$check_type = preg_replace("#\-\-\_\_\d{6}\_\_\-\-|\-\-\=\=\d{6}\=\=\-\-#","",$match[0]);
 			$check_type = trim($check_type);
-			if (preg_match("#\!#",$check_type,$not)) {
+			echo "857 <br />";
+			if (preg_match("#^\!#",$check_type,$not)) {
 				handler_expression(ltrim($match[0],"!"),1,'not');
 			}
+			echo "861 <br />";
 			if (preg_match("#^\\$\w+#",$check_type,$variable)) {
 				echo $variable[0];		
 			}
+			echo "865 <br />";
 			if (preg_match("#^\w+#",$check_type,$word)) {
 				$key = $word[0];
 				$key_inclusion = "<span style='".$correspond_table[$key][0]."'>".$key."</span>";
@@ -895,6 +886,7 @@
 				}
 			}
 			$match[0] = preg_replace("#".preg_quote($key,"#")."#",$key_inclusion,$match[0],1);	
+			echo "903 <br />";
 			if (preg_match("#\\$*\w+\s*".$parenthesis."\s*".$braces."#",$match[0],$function)) {
 				echo $function[0]."<br />";
 			}
@@ -985,6 +977,8 @@
 			// $match[0] = $number_of_expressions[count($number_of_expressions)-1]." ".$match[0];
 		// }
 		// echo "handler_expression == ".$number_of_expressions[0]."  <br />";
+		echo "function handler_expression end <br />";
+		echo $match[0]."<br />";
 		if ($echo) {
 			return  $match[0];
 		}
@@ -1242,6 +1236,7 @@
 			global $collection_any_quotation;
 			// echo "hide_any_quotation $string <b> end </b><br />";
 		if (!$quotation_switch) {
+			echo "1258 string $string for code<br />";
 			replace_any_quotation ();
 			$string = preg_replace_callback ("#\"[^\"]*\"|\'[^\']*\'#","replace_any_quotation",$string);	
 			//echo $string;
@@ -1249,12 +1244,14 @@
 		else {
 			// echo "hide_any_quotation 1 $string <br />";
 			if ($without_color){
+				echo "1266 string $string for encode without color <br />";
 				$string = preg_replace_callback ("#\-\-\+\+\d{6}\+\+\-\-#", function ($match) { 
 					global $collection_any_quotation; 
 					$index = trim($match[0],"+-"); 
 					return $collection_any_quotation[ltrim($index,"0")-1]; 
 				},$string);
 			} else {
+				echo "1266 string $string for encode color <br />";
 				$string = preg_replace_callback ("#\-\-\+\+\d{6}\+\+\-\-#", function ($match) { 
 					global $collection_any_quotation; 
 					$index = trim($match[0],"+-"); 
@@ -1337,6 +1334,7 @@
 			check();
 			// echo "parse_file hide_any_quotation close <br />";
 			if ($echo) {
+			echo "1353 string $string <br />";
 			$string = hide_any_quotation($string,1);
 			// echo "parse_file ------------------ file_name = $file_name, count(collection_non_php_parts) =".count($collection_non_php_parts)."<br />";
 			$string = change_non_php($string,1);
@@ -1381,7 +1379,7 @@
 				$variables_info,
 				$file_name;
 
-		$debug = 0;
+		$debug = 1;
 
 		debug (__FUNCTION__);
 
@@ -1411,7 +1409,7 @@
 		} 	
 		if (!empty($_POST['file'])){
 			$file_name = $_POST['file'];
-			define('__FILE____PHPSTEPER',ROOT."/".$file_name);
+			$constants['__file____phpsteper'] = ROOT."/".$file_name;
 		}
 		$included_files = [$file_name];
 		$name_core_file_for_include = $file_name;
