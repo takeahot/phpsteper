@@ -172,7 +172,7 @@
 	}
 
 
-	function include_phpsteper ($arr) {
+	function include_phpsteper ($arr,$once = 0) {
 		debug (__FUNCTION__);
 		//echo "<br> arr <br>";
 		//var_dump($arr);
@@ -192,6 +192,7 @@
 				$name_core_file_for_include,
 				$include_deep_parse,
 				$is_library,
+				$included_files,
 				$file_name;
 
 		if ($include_deep_parse === NULL) {
@@ -255,6 +256,16 @@
 		// connect array into string
 		$path_to_file = implode(array_values($path_to_file));
 		$path_to_file = preg_replace("#".dirname(__FILE__)."/#","",$path_to_file);
+		if ($once) {
+			foreach ($included_files as $val) {
+				if ($path_to_file === $val) {
+					$return['pattern'] = "";
+					$return['inclusion'] = "";
+					return $return;
+				}
+			}
+		}
+		array_push($included_files,$path_to_file);
 
 		// if ($name_core_file_for_include == $file_name) {
 		if ($break_parse_file < 10) {
@@ -379,13 +390,13 @@
 
 	function require_once_phpsteper ($arg) {
 		debug (__FUNCTION__);
-		$return = include_phpsteper ($arg);
+		$return = include_phpsteper ($arg,1);
 		return $return;
 	}
 
 	function include_once_phpsteper ($arg) {
 		debug (__FUNCTION__);
-		$return = include_phpsteper ($arg);
+		$return = include_phpsteper ($arg,1);
 		return $return;
 	}
 
@@ -774,34 +785,82 @@
 		++$number_of_expressions[count($number_of_expressions)-1];
 		//var_dump($number_of_expressions);
 
+
+
+		//=== Check type of expression;
+		$deep = 10;
+		$parenthesis = make_pattern_count_parentheses ($deep,"(");
+		$braces = make_pattern_count_parentheses ($deep,"{");
+		$check_type = preg_replace("#\-\-\_\_\d{6}\_\_\-\-|\-\-\=\=\d{6}\=\=\-\-#","",$match[0]);
+		$check_type = trim($check_type);
+		if (preg_match("#^\\$\w+#",$check_type,$variable)) {
+			echo $variable[0];		
+		}
+		if (preg_match("#^\w+#",$check_type,$word)) {
+			echo $word[0];
+			$key = $word[0];
+			$key_inclusion = "<span style='".$correspond_table[$key][0]."'>".$key."</span>"
+			if ($key !== "function") {
+				$is_library = false;
+			}
+			$arrfunc = parse_func ($match[0],$key);
+			if (function_exists($key."_phpsteper")) {
+				$func_name = $key."_phpsteper";
+				//$arrfunc is all function's parts in arr. $arrfunc = [key,arguments,body];
+				//$mathc[0] is string with expression
+				$return = $func_name($arrfunc);
+				if (($return)&&($return['pattern'] !== "")) {
+					// if ($number_of_expressions[0] < 2) {
+						// echo "handler_expression -- get return from func_name";
+						// var_dump_html($return);
+						// echo "<br />";
+					// }
+
+				$match[0] = change_frag($return['pattern'],$return['inclusion'],$match[0]);
+				} else 
+				{
+					$match[0] = htmlentities($match[0]);
+				}
+			} else 
+			{
+					$match[0] = htmlentities($match[0]);
+			}
+		}
+		if (preg_match("#\\$*\w+\s*".$parenthesis."\s*".$braces."#",$match[0],$function)) {
+			echo $function[0]."<br />";
+		}
+		//part for key() {} type of expression;;
+
+
+
 		/*find keypart in space befor parentheses and seve in $ma;
 */		
 		// echo $match[0];
-		$count = 0;
+		// $count = 0;
 		// assign $m all befor first parenthesis
-		preg_match("#^[^\(]*#",$match[0],$m);
+		// preg_match("#^[^\(]*#",$match[0],$m);
 		// assign $ma key part if finded correspond in $correspond_table and $m 
 		/*echo 'make_pattern_arr ';
 		var_dump(make_pattern_arr($correspond_table));
 		echo "<br /> <br />";*/
-		$ma = preg_replace_callback(make_pattern_arr($correspond_table),"key_part",$m[0],1,$count);
-		if (!$count) {
-			$match[0] = htmlentities($match[0]);
-			$is_library = FALSE;
+		// $ma = preg_replace_callback(make_pattern_arr($correspond_table),"key_part",$m[0],1,$count);
+		// if (!$count) {
+			// $match[0] = htmlentities($match[0]);
+			// $is_library = FALSE;
 			// echo "handler_expression: no key part <br /> match[0] = ".$match[0]."<br />";
-		}
+		// }
 		// if keypart exists
 		else {
 			// replace all befor first parenthesis by key part
 			
 			// assign $key 	last defined key ( key defined in key_part function by key_def() function)
-			$key = key_def();
-			if ($key !== "function") {
-				$is_library = FALSE;
-			}
+			// $key = key_def();
+			// if ($key !== "function") {
+				// $is_library = FALSE;
+			// }
 
 
-			$arrfunc = parse_func ($match[0],$key);
+			// $arrfunc = parse_func ($match[0],$key);
 			// echo "handler_expression <br />";
 			// var_dump_html($arrfunc);
 			// if ($name_core_file_for_include != $file_name) {
@@ -813,31 +872,31 @@
 				var_dump_html($match[0]);
 				echo "<br />";
 			}*/
-			if (function_exists($key."_phpsteper")) {
-				$func_name = $key."_phpsteper";
+			// if (function_exists($key."_phpsteper")) {
+				// $func_name = $key."_phpsteper";
 				//$arrfunc is all function's parts in arr. $arrfunc = [key,arguments,body];
 				//$mathc[0] is string with expression
-				$return = $func_name($arrfunc);
-				if ($return) {
+				// $return = $func_name($arrfunc);
+				// if (($return)&&($return['pattern'] !== "")) {
 					// if ($number_of_expressions[0] < 2) {
 						// echo "handler_expression -- get return from func_name";
 						// var_dump_html($return);
 						// echo "<br />";
 					// }
 
-					$match[0] = change_frag($return['pattern'],$return['inclusion'],$match[0]);
-				} else 
-				{
-					$match[0] = htmlentities($match[0]);
-				}
+					// $match[0] = change_frag($return['pattern'],$return['inclusion'],$match[0]);
+				// } else 
+				// {
+					// $match[0] = htmlentities($match[0]);
+				// }
 
-			} else {
+			// } else {
 
-					$match[0] = htmlentities($match[0]);
-			}
-			$match[0] = preg_replace(htmlentities("#".preg_quote($m[0],"#")."#"),$ma,$match[0]);
+					// $match[0] = htmlentities($match[0]);
+			// }
+			// $match[0] = preg_replace(htmlentities("#".preg_quote($m[0],"#")."#"),$ma,$match[0]);
 
-		}
+		// }
 		//$match[0] = preg_replace("#^\h*\R#","\r\n .".$number_of_expressions[count($number_of_expressions)-1],$match[0],1,$count);
 		//if (!$count) {
 		/*echo "number_of_expressions ";	
@@ -1245,6 +1304,7 @@
 				$pattern_alt,
 				$is_library,
 				$debug,
+				$included_files;
 				$file_name;
 
 		$debug = 0;
@@ -1277,6 +1337,7 @@
 			$file_name = $_POST['file'];
 			$constants['__file____phpsteper'] = ROOT."/".$file_name;
 		}
+		$included_files = [$file_name];
 		$name_core_file_for_include = $file_name;
 		var_dump_html($_POST);
 		echo "<br />";
